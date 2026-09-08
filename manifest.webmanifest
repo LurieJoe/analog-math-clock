@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Analog Math Clock",
   "short_name": "Analog Math Clock",
-  "description": "Analog Math Clock is a customizable analog clock PWA with randomized equations, learning mode, alarms, chimes, backups, world time, photos, presets, and accessible display options.",
+  "description": "Analog Math Clock is a customizable analog clock PWA with equations, binary and Maya numerals, learning mode, alarms, world time, photos, and offline support.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

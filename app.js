@@ -28,6 +28,7 @@ const defaults = {
   pendulumColor: "#4f46e5",
   pendulumLength: 110,
   pendulumBob: "oval",
+  numeralStyle: "equations",
   difficulty: "mixed",
   photoPositionX: 0,
   photoPositionY: 0,
@@ -176,6 +177,7 @@ const elements = {
   closeSettings: document.querySelector("#close-settings"),
   settingsForm: document.querySelector("#settings-form"),
   timeZone: document.querySelector("#time-zone"),
+  equationDifficultySettings: document.querySelector("#equation-difficulty-settings"),
   themePreference: document.querySelector("#theme-preference"),
   facePicture: document.querySelector("#face-picture"),
   removePictureButton: document.querySelector("#remove-picture-button"),
@@ -346,6 +348,12 @@ function createClock(name, timeZone = LOCAL_TIME_ZONE, settings = {}) {
 
 function normalizeSettings(settings = {}) {
   const normalized = { ...defaults, ...settings };
+  if (!["equations", "binary", "maya"].includes(normalized.numeralStyle)) {
+    normalized.numeralStyle = defaults.numeralStyle;
+  }
+  if (!equationPools[normalized.difficulty]) {
+    normalized.difficulty = defaults.difficulty;
+  }
   if (
     typeof normalized.secondColor === "string" &&
     normalized.secondColor.toLowerCase() === "#b11f4b"
@@ -400,6 +408,7 @@ function randomIndex(length) {
 }
 
 function randomizeEquations(clock) {
+  if (clock.settings.numeralStyle !== "equations") return;
   clock.equations = Array.from({ length: 12 }, (_, index) => {
     const hour = index + 1;
     const builtIn = equationPools[clock.settings.difficulty][hour];
@@ -532,54 +541,154 @@ function boxFitsSafeCircle(box, safeRadius) {
 function renderEquations(view, clock) {
   view.equations.replaceChildren();
   view.equations.setAttribute("aria-hidden", String(!appSettings.learningMode));
-  if (!clock.equations.length) randomizeEquations(clock);
+  const numeralStyle = clock.settings.numeralStyle;
+  if (numeralStyle === "equations" && !clock.equations.length) randomizeEquations(clock);
 
-  clock.equations.forEach((equation, index) => {
+  for (let index = 0; index < 12; index += 1) {
     const hour = index + 1;
     let radius = EQUATION_RADIUS;
     let point = pointOnClock(hour, radius);
-    const label = createSvgElement("g", { class: "equation-label" });
-    const text = createSvgElement("text", {
-      class: "equation",
-      x: point.x.toFixed(2),
-      y: point.y.toFixed(2)
-    });
-    text.style.fontSize = `${clock.settings.equationSize}px`;
-    text.textContent = equation;
-    if (appSettings.learningMode) {
-      text.setAttribute("role", "button");
-      text.setAttribute("tabindex", "0");
-      text.setAttribute("aria-label", `Explain ${equation}, which equals ${hour}`);
-      text.classList.add("learning-enabled");
-      const explain = () => showEquationExplanation(equation, hour);
-      text.addEventListener("click", explain);
-      text.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") explain();
+    const label = createSvgElement("g", { class: "face-number-label" });
+    let positionLabel;
+
+    if (numeralStyle === "maya") {
+      const numeral = createMayaNumeral(hour);
+      const scale = clock.settings.equationSize / 30;
+      positionLabel = (nextPoint) => {
+        numeral.setAttribute(
+          "transform",
+          `translate(${nextPoint.x.toFixed(2)} ${nextPoint.y.toFixed(2)}) scale(${scale.toFixed(3)})`
+        );
+      };
+      positionLabel(point);
+      label.append(numeral);
+      if (appSettings.learningMode) {
+        enableLearningLabel(
+          label,
+          `Explain the Maya numeral for ${hour}`,
+          () =>
+            showNumeralExplanation(
+              `Maya numeral = ${hour}`,
+              `Each dot represents one and each horizontal bar represents five. Together, the symbols total ${hour}.`
+            )
+        );
+      }
+    } else {
+      const equation = numeralStyle === "binary" ? hour.toString(2) : clock.equations[index];
+      const text = createSvgElement("text", {
+        class: numeralStyle === "binary" ? "equation binary-number" : "equation"
       });
+      positionLabel = (nextPoint) => {
+        text.setAttribute("x", nextPoint.x.toFixed(2));
+        text.setAttribute("y", nextPoint.y.toFixed(2));
+      };
+      positionLabel(point);
+      text.style.fontSize = `${
+        numeralStyle === "binary" ? clock.settings.equationSize * 0.88 : clock.settings.equationSize
+      }px`;
+      text.textContent = equation;
+      if (appSettings.learningMode) {
+        const explain =
+          numeralStyle === "binary"
+            ? () =>
+                showNumeralExplanation(
+                  `${equation}₂ = ${hour}`,
+                  `Read the binary digits as powers of two. This binary number equals ${hour} in decimal.`
+                )
+            : () => showEquationExplanation(equation, hour);
+        enableLearningLabel(
+          text,
+          numeralStyle === "binary"
+            ? `Explain binary ${equation}, which equals ${hour}`
+            : `Explain ${equation}, which equals ${hour}`,
+          explain
+        );
+      }
+      label.append(text);
     }
-    label.append(text);
     view.equations.append(label);
 
-    const maxWidth = 88;
-    const measuredWidth = text.getComputedTextLength();
-    if (measuredWidth > maxWidth) {
-      const fittedSize = Math.max(17, clock.settings.equationSize * (maxWidth / measuredWidth));
-      text.style.fontSize = `${fittedSize}px`;
-    }
-    if (text.getComputedTextLength() > maxWidth) {
-      text.setAttribute("textLength", maxWidth);
-      text.setAttribute("lengthAdjust", "spacingAndGlyphs");
+    const text = label.querySelector("text");
+    if (text) {
+      const maxWidth = 88;
+      const measuredWidth = text.getComputedTextLength();
+      if (measuredWidth > maxWidth) {
+        const fittedSize = Math.max(
+          17,
+          Number.parseFloat(text.style.fontSize) * (maxWidth / measuredWidth)
+        );
+        text.style.fontSize = `${fittedSize}px`;
+      }
+      if (text.getComputedTextLength() > maxWidth) {
+        text.setAttribute("textLength", maxWidth);
+        text.setAttribute("lengthAdjust", "spacingAndGlyphs");
+      }
     }
 
-    let box = text.getBBox();
+    let box = label.getBBox();
     const safeRadius = getEquationSafeRadius(clock.settings.faceShape);
     while (!boxFitsSafeCircle(box, safeRadius) && radius > 170) {
       radius -= 2;
       point = pointOnClock(hour, radius);
-      text.setAttribute("x", point.x.toFixed(2));
-      text.setAttribute("y", point.y.toFixed(2));
-      box = text.getBBox();
+      positionLabel(point);
+      box = label.getBBox();
     }
+  }
+}
+
+function createMayaNumeral(value) {
+  const numeral = createSvgElement("g", {
+    class: "maya-numeral",
+    "aria-hidden": "true"
+  });
+  const dots = value % 5;
+  const bars = Math.floor(value / 5);
+  const dotHeight = dots ? 7 : 0;
+  const barHeight = bars ? bars * 6 + (bars - 1) * 4 : 0;
+  const gap = dots && bars ? 5 : 0;
+  const totalHeight = dotHeight + gap + barHeight;
+  let y = -totalHeight / 2;
+
+  if (dots) {
+    const startX = -((dots - 1) * 10) / 2;
+    for (let index = 0; index < dots; index += 1) {
+      numeral.append(
+        createSvgElement("circle", {
+          class: "maya-dot",
+          cx: startX + index * 10,
+          cy: y + 3.5,
+          r: 3.5
+        })
+      );
+    }
+    y += dotHeight + gap;
+  }
+
+  for (let index = 0; index < bars; index += 1) {
+    numeral.append(
+      createSvgElement("line", {
+        class: "maya-bar",
+        x1: -18,
+        y1: y + 3,
+        x2: 18,
+        y2: y + 3
+      })
+    );
+    y += 10;
+  }
+  return numeral;
+}
+
+function enableLearningLabel(element, ariaLabel, explain) {
+  element.setAttribute("role", "button");
+  element.setAttribute("tabindex", "0");
+  element.setAttribute("aria-label", ariaLabel);
+  element.classList.add("learning-enabled");
+  element.addEventListener("click", explain);
+  element.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    explain();
   });
 }
 
@@ -619,6 +728,13 @@ function explainExpression(expression, result) {
 function showEquationExplanation(expression, result) {
   elements.learningExpression.textContent = `${expression} = ${result}`;
   elements.learningExplanation.textContent = explainExpression(expression, result);
+  elements.learningNotification.hidden = false;
+  elements.closeLearning.focus();
+}
+
+function showNumeralExplanation(heading, explanation) {
+  elements.learningExpression.textContent = heading;
+  elements.learningExplanation.textContent = explanation;
   elements.learningNotification.hidden = false;
   elements.closeLearning.focus();
 }
@@ -675,7 +791,14 @@ function applyClockSettings(view, clock) {
   view.hands.setAttribute("class", `hands ${clock.settings.handStyle}`);
   view.ticks.hidden = !clock.settings.showTicks;
   view.title.textContent = clock.name;
-  view.svg.setAttribute("aria-label", `${clock.name} equation clock`);
+  view.newEquations.hidden = clock.settings.numeralStyle !== "equations";
+  view.mobileNewEquations.hidden = clock.settings.numeralStyle !== "equations";
+  const faceDescription = {
+    equations: "mathematical equation labels",
+    binary: "binary number labels",
+    maya: "Maya numeral labels"
+  }[clock.settings.numeralStyle];
+  view.svg.setAttribute("aria-label", `${clock.name} analog clock with ${faceDescription}`);
   applyPhotoSettings(view, clock);
 }
 
@@ -815,6 +938,8 @@ function createClockCard(clock) {
     card,
     display,
     title,
+    newEquations,
+    mobileNewEquations,
     svg,
     photo: svg.querySelector(".face-photo"),
     photoOverlay: svg.querySelector(".photo-overlay"),
@@ -1015,6 +1140,11 @@ function populateForm(clock) {
     if (field.type === "checkbox") field.checked = value;
     else field.value = value;
   });
+  updateNumeralControls(clock.settings.numeralStyle);
+}
+
+function updateNumeralControls(numeralStyle) {
+  elements.equationDifficultySettings.hidden = numeralStyle !== "equations";
 }
 
 function readForm() {
@@ -1039,6 +1169,7 @@ function readForm() {
       pendulumColor: formData.get("pendulumColor"),
       pendulumLength: Number(formData.get("pendulumLength")),
       pendulumBob: formData.get("pendulumBob"),
+      numeralStyle: formData.get("numeralStyle"),
       difficulty: formData.get("difficulty"),
       photoPositionX: Number(formData.get("photoPositionX")),
       photoPositionY: Number(formData.get("photoPositionY")),
@@ -1060,6 +1191,7 @@ function previewForm() {
   if (!clock) return;
   const next = readForm();
   const difficultyChanged = next.settings.difficulty !== clock.settings.difficulty;
+  const numeralStyleChanged = next.settings.numeralStyle !== clock.settings.numeralStyle;
   const faceShapeChanged = next.settings.faceShape !== clock.settings.faceShape;
   clock.name = next.name;
   clock.timeZone = next.timeZone;
@@ -1067,6 +1199,7 @@ function previewForm() {
   elements.pendulumSettings.hidden = !["grandfather", "cuckoo"].includes(
     clock.settings.bodyStyle
   );
+  updateNumeralControls(clock.settings.numeralStyle);
   if (faceShapeChanged) {
     renderAllClocks();
     return;
@@ -1074,7 +1207,12 @@ function previewForm() {
   const view = clockViews.get(clock.id);
   applyClockSettings(view, clock);
   renderTicks(view, clock);
-  if (difficultyChanged) randomizeEquations(clock);
+  if (
+    clock.settings.numeralStyle === "equations" &&
+    (difficultyChanged || numeralStyleChanged)
+  ) {
+    randomizeEquations(clock);
+  }
   renderEquations(view, clock);
 }
 
@@ -1334,6 +1472,18 @@ async function createExportSvg(clock, view) {
     element.setAttribute("font-weight", "700");
     element.setAttribute("text-anchor", "middle");
     element.setAttribute("dominant-baseline", "middle");
+  });
+  clone.querySelectorAll(".binary-number").forEach((element) => {
+    element.setAttribute("font-family", "Consolas, Courier New, Courier, monospace");
+    element.setAttribute("letter-spacing", "0.08em");
+  });
+  clone.querySelectorAll(".maya-dot").forEach((element) => {
+    element.setAttribute("fill", clock.settings.equationColor);
+  });
+  clone.querySelectorAll(".maya-bar").forEach((element) => {
+    element.setAttribute("stroke", clock.settings.equationColor);
+    element.setAttribute("stroke-width", "6");
+    element.setAttribute("stroke-linecap", "round");
   });
   const hourHand = clone.querySelector(".hour-hand");
   hourHand.setAttribute("stroke", clock.settings.hourColor);

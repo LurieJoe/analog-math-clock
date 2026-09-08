@@ -449,14 +449,41 @@ select:focus-visible {
   user-select: none;
 }
 
-.equation.learning-enabled {
+.binary-number {
+  font-family: Consolas, "Courier New", Courier, monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.maya-dot {
+  fill: var(--equation-color, var(--cp-text));
+}
+
+.maya-bar {
+  stroke: var(--equation-color, var(--cp-text));
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.learning-enabled {
   cursor: help;
 }
 
 .equation.learning-enabled:hover,
-.equation.learning-enabled:focus {
+.equation.learning-enabled:focus,
+.face-number-label.learning-enabled:hover .maya-dot,
+.face-number-label.learning-enabled:focus .maya-dot {
   fill: var(--cp-accent);
   outline: none;
+}
+
+.face-number-label.learning-enabled:hover .maya-bar,
+.face-number-label.learning-enabled:focus .maya-bar {
+  stroke: var(--cp-accent);
+}
+
+.equation.learning-enabled:hover,
+.equation.learning-enabled:focus {
   text-decoration: underline;
 }
 

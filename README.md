@@ -1,7 +1,8 @@
 # Analog Math Clock PWA
 
-Analog Math Clock provides customizable analog clocks that use randomized mathematical equations instead of hour numbers.
-Add multiple clocks, assign each one an IANA time zone, and give every clock its own appearance.
+Analog Math Clock provides customizable analog clocks with randomized mathematical equations,
+binary numbers, or Maya numerals instead of standard hour numbers. Add multiple clocks, assign
+each one an IANA time zone, and give every clock its own appearance.
 
 Customization includes:
 
@@ -22,7 +23,8 @@ Customization includes:
 - Screen wake lock for always-on clock displays
 - PNG and SVG clock-face export
 - Custom equation editing and optional inclusion during randomization
-- Tap-to-learn equation explanations
+- Binary and Maya dot-and-bar numeral faces
+- Tap-to-learn explanations for equations and numeral styles
 - Optional date, weekday, UTC offset, and daylight-saving details
 - High contrast, reduced motion, and larger-control accessibility settings
 - Per-clock named alarms with built-in sounds, visual alerts, notifications, and five-minute snooze

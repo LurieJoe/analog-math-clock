@@ -20,7 +20,7 @@
     <title>Analog Math Clock</title>
     <meta
       name="description"
-      content="Analog Math Clock is a customizable analog clock PWA with randomized mathematical equations, multiple time zones, alarms, learning tools, and offline support."
+      content="Analog Math Clock is a customizable analog clock PWA with equations, binary and Maya numerals, multiple time zones, alarms, learning tools, and offline support."
     />
     <meta name="theme-color" content="#f7f4ef" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -195,11 +195,11 @@
               <input id="rim-color" name="rimColor" type="color" />
             </label>
             <label>
-              Equation color
+              Number and equation color
               <input id="equation-color" name="equationColor" type="color" />
             </label>
             <label>
-              Equation size
+              Number and equation size
               <input id="equation-size" name="equationSize" type="range" min="22" max="40" step="1" />
             </label>
             <label class="checkbox-label">
@@ -327,9 +327,17 @@
           </fieldset>
 
           <fieldset>
-            <legend>Equation difficulty</legend>
+            <legend>Face numbers</legend>
             <label>
-              Expression set
+              Number style
+              <select id="numeral-style" name="numeralStyle">
+                <option value="equations">Equations</option>
+                <option value="binary">Binary</option>
+                <option value="maya">Maya numerals</option>
+              </select>
+            </label>
+            <label id="equation-difficulty-settings">
+              Equation difficulty
               <select id="difficulty" name="difficulty">
                 <option value="simple">Simple</option>
                 <option value="mixed">Mixed</option>
