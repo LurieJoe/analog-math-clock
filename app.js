@@ -163,6 +163,14 @@ const elements = {
   addClockButton: document.querySelector("#add-clock-button"),
   toolsButton: document.querySelector("#tools-button"),
   presentationButton: document.querySelector("#presentation-button"),
+  mobileHeaderMenu: document.querySelector("#mobile-header-menu"),
+  mobileActionSheet: document.querySelector("#mobile-action-sheet"),
+  mobileSheetBackdrop: document.querySelector("#mobile-sheet-backdrop"),
+  closeMobileActionSheet: document.querySelector("#close-mobile-action-sheet"),
+  mobileToolsButton: document.querySelector("#mobile-tools-button"),
+  mobilePresentationButton: document.querySelector("#mobile-presentation-button"),
+  mobileAddClockButton: document.querySelector("#mobile-add-clock-button"),
+  mobileInstallButton: document.querySelector("#mobile-install-button"),
   presentationExit: document.querySelector("#presentation-exit"),
   settingsPanel: document.querySelector("#settings-panel"),
   closeSettings: document.querySelector("#close-settings"),
@@ -229,6 +237,8 @@ let deferredInstallPrompt = null;
 let waitingServiceWorker = null;
 let serviceWorkerRegistration = null;
 let reloadingForUpdate = false;
+let installPreviousFocus = null;
+let toolsPreviousFocus = null;
 let wakeLockSentinel = null;
 let wakeLockRequest = null;
 let audioContext = null;
@@ -853,6 +863,24 @@ function closeMobileMenus() {
   });
 }
 
+function openMobileActionSheet() {
+  closeMobileMenus();
+  elements.mobileActionSheet.hidden = false;
+  elements.mobileSheetBackdrop.hidden = false;
+  elements.mobileHeaderMenu.setAttribute("aria-expanded", "true");
+  document.body.classList.add("mobile-sheet-open");
+  elements.mobileToolsButton.focus();
+}
+
+function closeMobileActionSheet(restoreFocus = true) {
+  if (elements.mobileActionSheet.hidden) return;
+  elements.mobileActionSheet.hidden = true;
+  elements.mobileSheetBackdrop.hidden = true;
+  elements.mobileHeaderMenu.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("mobile-sheet-open");
+  if (restoreFocus) elements.mobileHeaderMenu.focus();
+}
+
 function getClockTimeParts(date, timeZone) {
   if (timeZone === LOCAL_TIME_ZONE) {
     return {
@@ -1446,7 +1474,8 @@ async function releaseWakeLock() {
   wakeLockSentinel = null;
 }
 
-function openTools() {
+function openTools(invoker = elements.toolsButton) {
+  toolsPreviousFocus = invoker;
   renderToolLists();
   elements.toolsPanel.hidden = false;
   elements.closeTools.focus();
@@ -1454,7 +1483,8 @@ function openTools() {
 
 function closeTools() {
   elements.toolsPanel.hidden = true;
-  elements.toolsButton.focus();
+  toolsPreviousFocus?.focus?.();
+  toolsPreviousFocus = null;
 }
 
 function enterPresentationMode() {
@@ -1638,7 +1668,22 @@ function dismissActiveAlarm() {
 }
 
 elements.addClockButton.addEventListener("click", addClock);
-elements.toolsButton.addEventListener("click", openTools);
+elements.toolsButton.addEventListener("click", () => openTools(elements.toolsButton));
+elements.mobileHeaderMenu.addEventListener("click", openMobileActionSheet);
+elements.closeMobileActionSheet.addEventListener("click", () => closeMobileActionSheet());
+elements.mobileSheetBackdrop.addEventListener("click", () => closeMobileActionSheet());
+elements.mobileToolsButton.addEventListener("click", () => {
+  closeMobileActionSheet(false);
+  openTools(elements.mobileHeaderMenu);
+});
+elements.mobilePresentationButton.addEventListener("click", () => {
+  closeMobileActionSheet(false);
+  enterPresentationMode();
+});
+elements.mobileAddClockButton.addEventListener("click", () => {
+  closeMobileActionSheet(false);
+  addClock();
+});
 elements.closeTools.addEventListener("click", closeTools);
 elements.presentationButton.addEventListener("click", enterPresentationMode);
 elements.presentationExit.addEventListener("click", exitPresentationMode);
@@ -1804,6 +1849,10 @@ elements.resetButton.addEventListener("click", () => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  if (!elements.mobileActionSheet.hidden) {
+    closeMobileActionSheet();
+    return;
+  }
   closeMobileMenus();
   if (!elements.settingsPanel.hidden) closeSettings();
   if (!elements.toolsPanel.hidden) closeTools();
@@ -1825,12 +1874,13 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   deferredInstallPrompt = event;
-  elements.installButton.hidden = false;
+  setInstallButtonsHidden(false);
 });
 
 function closeInstallInstructions() {
   elements.installNotification.hidden = true;
-  elements.installButton.focus();
+  installPreviousFocus?.focus?.();
+  installPreviousFocus = null;
 }
 
 function showInstallInstructions() {
@@ -1884,7 +1934,8 @@ function showInstallInstructions() {
   elements.closeInstallNotification.focus();
 }
 
-elements.installButton.addEventListener("click", async () => {
+async function requestInstall(invoker) {
+  installPreviousFocus = invoker;
   if (!deferredInstallPrompt) {
     showInstallInstructions();
     return;
@@ -1892,20 +1943,31 @@ elements.installButton.addEventListener("click", async () => {
   deferredInstallPrompt.prompt();
   const choice = await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
-  if (choice.outcome !== "accepted") elements.installButton.hidden = false;
+  if (choice.outcome !== "accepted") setInstallButtonsHidden(false);
+}
+
+function setInstallButtonsHidden(hidden) {
+  elements.installButton.hidden = hidden;
+  elements.mobileInstallButton.hidden = hidden;
+}
+
+elements.installButton.addEventListener("click", () => requestInstall(elements.installButton));
+elements.mobileInstallButton.addEventListener("click", () => {
+  closeMobileActionSheet(false);
+  requestInstall(elements.mobileHeaderMenu);
 });
 elements.closeInstallNotification.addEventListener("click", closeInstallInstructions);
 elements.installInstructionsDone.addEventListener("click", closeInstallInstructions);
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
-  elements.installButton.hidden = true;
+  setInstallButtonsHidden(true);
   elements.installNotification.hidden = true;
 });
 
 const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone =
   window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-elements.installButton.hidden = isStandalone;
+setInstallButtonsHidden(isStandalone);
 
 function showUpdateNotification(worker) {
   waitingServiceWorker = worker;

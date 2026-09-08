@@ -59,10 +59,69 @@
               <span>Install</span>
             </button>
           </div>
+          <button
+            class="icon-button mobile-header-menu"
+            id="mobile-header-menu"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="mobile-action-sheet"
+            aria-expanded="false"
+          >
+            <span aria-hidden="true">☰</span>
+            <span>Menu</span>
+          </button>
         </header>
 
         <div class="clocks-grid" id="clocks-grid"></div>
       </section>
+
+      <div class="mobile-sheet-backdrop" id="mobile-sheet-backdrop" hidden></div>
+      <aside
+        class="mobile-action-sheet"
+        id="mobile-action-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-action-sheet-title"
+        hidden
+      >
+        <div class="mobile-sheet-heading">
+          <div>
+            <p class="eyebrow">App actions</p>
+            <h2 id="mobile-action-sheet-title">Menu</h2>
+          </div>
+          <button
+            class="close-button"
+            id="close-mobile-action-sheet"
+            type="button"
+            aria-label="Close menu"
+          >
+            ×
+          </button>
+        </div>
+        <div class="mobile-sheet-actions">
+          <button class="mobile-sheet-action" id="mobile-tools-button" type="button">
+            <span aria-hidden="true">☰</span>
+            <span>Tools</span>
+          </button>
+          <button class="mobile-sheet-action" id="mobile-presentation-button" type="button">
+            <span aria-hidden="true">⛶</span>
+            <span>Clock-only</span>
+          </button>
+          <button class="mobile-sheet-action" id="mobile-add-clock-button" type="button">
+            <span aria-hidden="true">＋</span>
+            <span>Add clock</span>
+          </button>
+          <button
+            class="mobile-sheet-action"
+            id="mobile-install-button"
+            type="button"
+            hidden
+          >
+            <span aria-hidden="true">↓</span>
+            <span>Install</span>
+          </button>
+        </div>
+      </aside>
 
       <aside class="settings-panel" id="settings-panel" aria-label="Clock customization" hidden>
         <div class="settings-heading">
