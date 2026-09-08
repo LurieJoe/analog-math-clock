@@ -891,7 +891,7 @@ if ("serviceWorker" in navigator) {
 
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("./sw.js")
+      .register("./sw.js", { updateViaCache: "none" })
       .then((registration) => {
         serviceWorkerRegistration = registration;
         if (registration.waiting && navigator.serviceWorker.controller) {

@@ -35,7 +35,9 @@ offered by the browser. The app works offline after its first successful load an
 and appearance preferences locally on the device.
 
 When an updated service worker is available, the running app displays **Update and Restart** and
-**Later** choices. Updating activates the downloaded version and reloads the PWA.
+**Later** choices. Updating activates the downloaded version and reloads the PWA. Update
+installation bypasses HTTP caches, and normal online use refreshes cached resources while
+retaining offline fallbacks.
 
 ## GitHub Pages
 
