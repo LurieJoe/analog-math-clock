@@ -24,7 +24,7 @@ Customization includes:
 - Tap-to-learn equation explanations
 - Optional date, weekday, UTC offset, and daylight-saving details
 - High contrast, reduced motion, and larger-control accessibility settings
-- Multiple named alarms with built-in sounds, visual alerts, notifications, and five-minute snooze
+- Per-clock named alarms with built-in sounds, visual alerts, notifications, and five-minute snooze
 - Optional per-clock hourly chimes with a sound preview
 
 ## Run locally

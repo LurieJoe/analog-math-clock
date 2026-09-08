@@ -203,7 +203,6 @@ const elements = {
   addCustomEquation: document.querySelector("#add-custom-equation"),
   customEquationList: document.querySelector("#custom-equation-list"),
   notificationPermission: document.querySelector("#notification-permission"),
-  alarmClock: document.querySelector("#alarm-clock"),
   alarmTime: document.querySelector("#alarm-time"),
   alarmLabel: document.querySelector("#alarm-label"),
   alarmSound: document.querySelector("#alarm-sound"),
@@ -1067,6 +1066,7 @@ function openSettings(clockId) {
   if (!clock) return;
   activeClockId = clockId;
   populateForm(clock);
+  renderAlarmList();
   elements.settingsPanel.hidden = false;
   elements.closeSettings.focus();
 }
@@ -1597,18 +1597,13 @@ function checkChimesAndAlarms(now) {
 }
 
 function renderAlarmList() {
-  elements.alarmClock.replaceChildren(
-    ...clocks.map((clock) => new Option(clock.name, clock.id))
-  );
+  const clockAlarms = alarms.filter((alarm) => alarm.clockId === activeClockId);
   elements.alarmList.replaceChildren(
-    ...alarms.map((alarm) => {
+    ...clockAlarms.map((alarm) => {
       const row = document.createElement("div");
       row.className = "compact-list-row";
-      const clock = clocks.find((item) => item.id === alarm.clockId);
       const text = document.createElement("span");
-      text.textContent = `${alarm.time} · ${alarm.label || "Alarm"} · ${
-        clock?.name || "Deleted clock"
-      }`;
+      text.textContent = `${alarm.time} · ${alarm.label || "Alarm"}`;
       const toggle = document.createElement("input");
       toggle.type = "checkbox";
       toggle.checked = alarm.enabled;
@@ -1627,11 +1622,10 @@ function renderAlarmList() {
       return row;
     })
   );
-  if (!alarms.length) elements.alarmList.textContent = "No alarms yet.";
+  if (!clockAlarms.length) elements.alarmList.textContent = "No alarms for this clock.";
 }
 
 function renderToolLists() {
-  renderAlarmList();
   renderCustomEquationList();
   elements.restoreMode.value = "merge";
 }
@@ -1717,10 +1711,10 @@ elements.notificationPermission.addEventListener("click", async () => {
 });
 
 elements.addAlarm.addEventListener("click", () => {
-  if (!elements.alarmClock.value || !elements.alarmTime.value) return;
+  if (!activeClockId || !elements.alarmTime.value) return;
   alarms.push({
     id: createId(),
-    clockId: elements.alarmClock.value,
+    clockId: activeClockId,
     time: elements.alarmTime.value,
     label: elements.alarmLabel.value.trim() || "Alarm",
     sound: elements.alarmSound.value,

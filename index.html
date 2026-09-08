@@ -320,13 +320,39 @@
               </button>
             </div>
           </fieldset>
-
-          <div class="settings-actions">
-            <button id="reset-button" class="secondary-button" type="button">Reset appearance</button>
-            <button class="primary-button" type="submit">Save and close</button>
-          </div>
         </form>
 
+        <fieldset>
+          <legend>Alarms for this clock</legend>
+          <label>
+            Time
+            <input id="alarm-time" type="time" value="07:00" />
+          </label>
+          <label>
+            Label
+            <input id="alarm-label" type="text" maxlength="50" placeholder="Wake up" />
+          </label>
+          <label>
+            Sound
+            <select id="alarm-sound">
+              <option value="chime">Chime</option>
+              <option value="bell">Bell</option>
+              <option value="cuckoo">Cuckoo</option>
+              <option value="digital">Digital</option>
+            </select>
+          </label>
+          <button id="add-alarm" class="primary-button" type="button">Add alarm</button>
+          <div id="alarm-list" class="compact-list"></div>
+          <p class="tool-note">
+            Alarms follow this clock's time zone and are reliable while Math Clock is open.
+            Background notifications are best-effort.
+          </p>
+        </fieldset>
+
+        <div class="settings-actions">
+          <button id="reset-button" class="secondary-button" type="button">Reset appearance</button>
+          <button class="primary-button" type="submit" form="settings-form">Save and close</button>
+        </div>
       </aside>
 
       <aside class="settings-panel tools-panel" id="tools-panel" aria-label="Math Clock tools" hidden>
@@ -368,6 +394,17 @@
             <input id="large-controls" type="checkbox" />
             Larger controls
           </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Notifications</legend>
+          <button id="notification-permission" class="secondary-button" type="button">
+            Enable notifications
+          </button>
+          <p class="tool-note">
+            Notification permission applies to the entire app. Individual alarms are managed
+            from each clock's Customize panel.
+          </p>
         </fieldset>
 
         <fieldset>
@@ -421,38 +458,6 @@
           <div id="custom-equation-list" class="compact-list"></div>
         </fieldset>
 
-        <fieldset>
-          <legend>Alarms</legend>
-          <button id="notification-permission" class="secondary-button" type="button">
-            Enable notifications
-          </button>
-          <label>
-            Clock
-            <select id="alarm-clock"></select>
-          </label>
-          <label>
-            Time
-            <input id="alarm-time" type="time" value="07:00" />
-          </label>
-          <label>
-            Label
-            <input id="alarm-label" type="text" maxlength="50" placeholder="Wake up" />
-          </label>
-          <label>
-            Sound
-            <select id="alarm-sound">
-              <option value="chime">Chime</option>
-              <option value="bell">Bell</option>
-              <option value="cuckoo">Cuckoo</option>
-              <option value="digital">Digital</option>
-            </select>
-          </label>
-          <button id="add-alarm" class="primary-button" type="button">Add alarm</button>
-          <div id="alarm-list" class="compact-list"></div>
-          <p class="tool-note">
-            Alarms are reliable while Math Clock is open. Background notifications are best-effort.
-          </p>
-        </fieldset>
       </aside>
 
       <button class="presentation-exit" id="presentation-exit" type="button" hidden>
