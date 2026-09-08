@@ -6,12 +6,18 @@
     <script>
       (() => {
         const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+        const saved = localStorage.getItem("equation-clock-theme") || "system";
+        const preference = param || saved;
         const theme =
-          param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          preference === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : preference;
         document.documentElement.setAttribute("data-theme", theme);
       })();
     </script>
-    <title>Equation Clocks</title>
+    <title>Math Clock</title>
     <meta
       name="description"
       content="Customizable analog clocks with randomized mathematical equations and selectable time zones."
@@ -19,7 +25,7 @@
     <meta name="theme-color" content="#f7f4ef" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Equation Clocks" />
+    <meta name="apple-mobile-web-app-title" content="Math Clock" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
@@ -32,7 +38,7 @@
         <header class="app-header">
           <div>
             <p class="eyebrow">World time</p>
-            <h1>Equation Clocks</h1>
+            <h1>Math Clock</h1>
           </div>
           <div class="top-actions">
             <button class="icon-button" id="add-clock-button" type="button">
@@ -70,6 +76,14 @@
             <label>
               Time zone
               <select id="time-zone" name="timeZone"></select>
+            </label>
+            <label>
+              App appearance
+              <select id="theme-preference" name="themePreference">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
             </label>
           </fieldset>
 
@@ -207,6 +221,33 @@
             <label class="checkbox-label">
               <input id="smooth-seconds" name="smoothSeconds" type="checkbox" />
               Smooth second hand
+            </label>
+          </fieldset>
+
+          <fieldset id="pendulum-settings" hidden>
+            <legend>Pendulum</legend>
+            <label>
+              Pendulum color
+              <input id="pendulum-color" name="pendulumColor" type="color" />
+            </label>
+            <label>
+              Pendulum length
+              <input
+                id="pendulum-length"
+                name="pendulumLength"
+                type="range"
+                min="60"
+                max="140"
+                step="5"
+              />
+            </label>
+            <label>
+              Pendulum bob
+              <select id="pendulum-bob" name="pendulumBob">
+                <option value="round">Round</option>
+                <option value="oval">Oval</option>
+                <option value="diamond">Diamond</option>
+              </select>
             </label>
           </fieldset>
 

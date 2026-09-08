@@ -1,6 +1,7 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CLOCKS_KEY = "equation-clocks-v2";
 const LEGACY_SETTINGS_KEY = "equation-clock-settings-v1";
+const THEME_KEY = "equation-clock-theme";
 const PHOTO_DB_NAME = "equation-clock-photos";
 const PHOTO_STORE_NAME = "clock-photos";
 const LOCAL_TIME_ZONE = "local";
@@ -21,6 +22,9 @@ const defaults = {
   secondColor: "#b11f4b",
   handWidth: 14,
   smoothSeconds: true,
+  pendulumColor: "#b11f4b",
+  pendulumLength: 110,
+  pendulumBob: "oval",
   difficulty: "mixed",
   photoPositionX: 0,
   photoPositionY: 0,
@@ -81,8 +85,10 @@ const elements = {
   closeSettings: document.querySelector("#close-settings"),
   settingsForm: document.querySelector("#settings-form"),
   timeZone: document.querySelector("#time-zone"),
+  themePreference: document.querySelector("#theme-preference"),
   facePicture: document.querySelector("#face-picture"),
   removePictureButton: document.querySelector("#remove-picture-button"),
+  pendulumSettings: document.querySelector("#pendulum-settings"),
   resetButton: document.querySelector("#reset-button"),
   installButton: document.querySelector("#install-button"),
   iosInstallHelp: document.querySelector("#ios-install-help"),
@@ -93,6 +99,7 @@ const elements = {
 
 let clocks = loadClocks();
 let activeClockId = null;
+let themePreference = localStorage.getItem(THEME_KEY) || "system";
 let deferredInstallPrompt = null;
 let waitingServiceWorker = null;
 let serviceWorkerRegistration = null;
@@ -397,7 +404,12 @@ function applyClockSettings(view, clock) {
   style.setProperty("--second-color", clock.settings.secondColor);
   style.setProperty("--hour-width", clock.settings.handWidth);
   style.setProperty("--minute-width", Math.max(5, clock.settings.handWidth - 4));
-  view.display.setAttribute("class", `clock-display ${clock.settings.bodyStyle}`);
+  style.setProperty("--pendulum-color", clock.settings.pendulumColor);
+  style.setProperty("--pendulum-length", `${clock.settings.pendulumLength}px`);
+  view.display.setAttribute(
+    "class",
+    `clock-display ${clock.settings.bodyStyle} pendulum-${clock.settings.pendulumBob}`
+  );
   view.hands.setAttribute("class", `hands ${clock.settings.handStyle}`);
   view.ticks.hidden = !clock.settings.showTicks;
   view.title.textContent = clock.name;
@@ -411,6 +423,18 @@ function displayTimeZone(timeZone) {
     return `System · ${Intl.DateTimeFormat().resolvedOptions().timeZone.replaceAll("_", " ")}`;
   }
   return timeZone.replaceAll("_", " ");
+}
+
+function applyThemePreference(preference, persist = false) {
+  themePreference = preference;
+  const resolved =
+    preference === "system"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : preference;
+  document.documentElement.setAttribute("data-theme", resolved);
+  if (persist) localStorage.setItem(THEME_KEY, preference);
 }
 
 function createActionButton(label, className, action) {
@@ -491,8 +515,18 @@ function createClockCard(clock) {
   display.className = `clock-display ${clock.settings.bodyStyle}`;
   const decoration = document.createElement("div");
   decoration.className = "clock-body-decoration";
+  decoration.innerHTML = `
+    <span class="alarm-handle"></span>
+    <span class="alarm-clapper alarm-clapper-left"></span>
+    <span class="alarm-clapper alarm-clapper-right"></span>
+    <span class="alarm-foot alarm-foot-left"></span>
+    <span class="alarm-foot alarm-foot-right"></span>
+  `;
+  const bird = document.createElement("div");
+  bird.className = "cuckoo-bird";
+  bird.setAttribute("aria-hidden", "true");
   const svg = createClockSvg(clock);
-  display.append(decoration, svg);
+  display.append(bird, decoration, svg);
   wrap.append(display);
 
   const footer = document.createElement("footer");
@@ -636,6 +670,10 @@ function populateTimeZones() {
 function populateForm(clock) {
   elements.settingsForm.elements.name.value = clock.name;
   elements.settingsForm.elements.timeZone.value = clock.timeZone;
+  elements.themePreference.value = themePreference;
+  elements.pendulumSettings.hidden = !["grandfather", "cuckoo"].includes(
+    clock.settings.bodyStyle
+  );
   Object.entries(clock.settings).forEach(([name, value]) => {
     const field = elements.settingsForm.elements.namedItem(name);
     if (!field) return;
@@ -649,6 +687,7 @@ function readForm() {
   return {
     name: String(formData.get("name")).trim() || "Clock",
     timeZone: formData.get("timeZone"),
+    themePreference: formData.get("themePreference"),
     settings: {
       bodyStyle: formData.get("bodyStyle"),
       faceShape: formData.get("faceShape"),
@@ -663,6 +702,9 @@ function readForm() {
       secondColor: formData.get("secondColor"),
       handWidth: Number(formData.get("handWidth")),
       smoothSeconds: elements.settingsForm.elements.smoothSeconds.checked,
+      pendulumColor: formData.get("pendulumColor"),
+      pendulumLength: Number(formData.get("pendulumLength")),
+      pendulumBob: formData.get("pendulumBob"),
       difficulty: formData.get("difficulty"),
       photoPositionX: Number(formData.get("photoPositionX")),
       photoPositionY: Number(formData.get("photoPositionY")),
@@ -677,11 +719,15 @@ function previewForm() {
   const clock = clocks.find((item) => item.id === activeClockId);
   if (!clock) return;
   const next = readForm();
+  applyThemePreference(next.themePreference, true);
   const difficultyChanged = next.settings.difficulty !== clock.settings.difficulty;
   const faceShapeChanged = next.settings.faceShape !== clock.settings.faceShape;
   clock.name = next.name;
   clock.timeZone = next.timeZone;
   clock.settings = next.settings;
+  elements.pendulumSettings.hidden = !["grandfather", "cuckoo"].includes(
+    clock.settings.bodyStyle
+  );
   if (faceShapeChanged) {
     renderAllClocks();
     return;
@@ -770,6 +816,7 @@ elements.settingsForm.addEventListener("submit", (event) => {
   const clock = clocks.find((item) => item.id === activeClockId);
   if (!clock) return;
   const next = readForm();
+  applyThemePreference(next.themePreference, true);
   clock.name = next.name;
   clock.timeZone = next.timeZone;
   clock.settings = next.settings;
@@ -793,6 +840,10 @@ document.addEventListener("keydown", (event) => {
   if (!elements.settingsPanel.hidden) closeSettings();
 });
 document.addEventListener("click", closeMobileMenus);
+
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (themePreference === "system") applyThemePreference("system");
+});
 
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
@@ -874,5 +925,6 @@ if ("serviceWorker" in navigator) {
 }
 
 populateTimeZones();
+applyThemePreference(themePreference);
 renderAllClocks();
 requestAnimationFrame(updateClocks);

@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "Equation Clocks",
-  "short_name": "Math Clocks",
+  "name": "Math Clock",
+  "short_name": "Math Clock",
   "description": "Customizable equation clocks with photos, selectable time zones, frame shapes, and decorative clock bodies.",
   "start_url": "./",
   "scope": "./",

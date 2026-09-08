@@ -1,4 +1,4 @@
-# Equation Clock PWA
+# Math Clock PWA
 
 Customizable analog clocks that use randomized mathematical equations instead of hour numbers.
 Add multiple clocks, assign each one an IANA time zone, and give every clock its own appearance.
@@ -7,9 +7,11 @@ Customization includes:
 
 - Standard wall, grandfather, cuckoo, and old-fashioned bell alarm clock bodies
 - Round, rounded-square, octagonal, and arched frames
+- A cuckoo bird plus configurable pendulum color, length, and bob shape
 - Device pictures stored locally as clock-face backgrounds
 - Picture position, zoom, opacity, and readability-overlay controls
 - Desktop hover actions and a touch-friendly three-dot menu for new equations, customization, and removal
+- App-wide Light, Dark, and System appearance modes
 
 ## Run locally
 
