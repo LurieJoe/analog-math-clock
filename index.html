@@ -308,15 +308,25 @@
               <input id="hourly-chime" name="hourlyChime" type="checkbox" />
               Play an hourly chime while open
             </label>
-            <label>
-              Chime sound
-              <select id="chime-sound" name="chimeSound">
-                <option value="chime">Chime</option>
-                <option value="bell">Bell</option>
-                <option value="cuckoo">Cuckoo</option>
-                <option value="digital">Digital</option>
-              </select>
-            </label>
+            <div class="sound-preview-row">
+              <label>
+                Chime sound
+                <select id="chime-sound" name="chimeSound">
+                  <option value="chime">Chime</option>
+                  <option value="bell">Bell</option>
+                  <option value="cuckoo">Cuckoo</option>
+                  <option value="digital">Digital</option>
+                </select>
+              </label>
+              <button
+                id="preview-chime-sound"
+                class="compact-button"
+                type="button"
+                aria-label="Play a sample of the selected chime sound"
+              >
+                Play sample
+              </button>
+            </div>
           </fieldset>
 
           <div class="settings-actions">

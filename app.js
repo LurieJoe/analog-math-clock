@@ -169,6 +169,7 @@ const elements = {
   pendulumSettings: document.querySelector("#pendulum-settings"),
   applyPresetButton: document.querySelector("#apply-preset-button"),
   resetButton: document.querySelector("#reset-button"),
+  previewChimeSound: document.querySelector("#preview-chime-sound"),
   installButton: document.querySelector("#install-button"),
   installNotification: document.querySelector("#install-notification"),
   installInstructions: document.querySelector("#install-instructions"),
@@ -1737,6 +1738,9 @@ elements.snoozeAlarm.addEventListener("click", () => {
 });
 elements.dismissAlarm.addEventListener("click", () => {
   dismissActiveAlarm();
+});
+elements.previewChimeSound.addEventListener("click", () => {
+  playSound(elements.settingsForm.elements.chimeSound.value);
 });
 
 elements.closeSettings.addEventListener("click", closeSettings);
