@@ -19,10 +19,10 @@ const defaults = {
   handStyle: "round",
   hourColor: "#242424",
   minuteColor: "#242424",
-  secondColor: "#b11f4b",
+  secondColor: "#4f46e5",
   handWidth: 14,
   smoothSeconds: true,
-  pendulumColor: "#b11f4b",
+  pendulumColor: "#4f46e5",
   pendulumLength: 110,
   pendulumBob: "oval",
   difficulty: "mixed",
@@ -151,9 +151,26 @@ function createClock(name, timeZone = LOCAL_TIME_ZONE, settings = {}) {
     id: createId(),
     name,
     timeZone,
-    settings: { ...defaults, ...settings },
+    settings: normalizeSettings(settings),
     equations: []
   };
+}
+
+function normalizeSettings(settings = {}) {
+  const normalized = { ...defaults, ...settings };
+  if (
+    typeof normalized.secondColor === "string" &&
+    normalized.secondColor.toLowerCase() === "#b11f4b"
+  ) {
+    normalized.secondColor = defaults.secondColor;
+  }
+  if (
+    typeof normalized.pendulumColor === "string" &&
+    normalized.pendulumColor.toLowerCase() === "#b11f4b"
+  ) {
+    normalized.pendulumColor = defaults.pendulumColor;
+  }
+  return normalized;
 }
 
 function loadClocks() {
@@ -164,7 +181,7 @@ function loadClocks() {
         id: clock.id || createId(),
         name: clock.name || `Clock ${index + 1}`,
         timeZone: clock.timeZone || LOCAL_TIME_ZONE,
-        settings: { ...defaults, ...clock.settings },
+        settings: normalizeSettings(clock.settings),
         equations: []
       }));
     }
@@ -926,5 +943,6 @@ if ("serviceWorker" in navigator) {
 
 populateTimeZones();
 applyThemePreference(themePreference);
+saveClocks();
 renderAllClocks();
 requestAnimationFrame(updateClocks);

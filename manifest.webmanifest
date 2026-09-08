@@ -9,7 +9,7 @@
   "display_override": ["fullscreen", "standalone"],
   "orientation": "any",
   "background_color": "#f7f4ef",
-  "theme_color": "#b11f4b",
+  "theme_color": "#4f46e5",
   "categories": ["education", "utilities", "personalization"],
   "icons": [
     {
