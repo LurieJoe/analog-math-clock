@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#b11f4b"/>
+  <circle cx="256" cy="256" r="190" fill="#ffffff" stroke="#242424" stroke-width="18"/>
+  <g fill="#242424" font-family="Georgia, serif" font-size="50" font-weight="700" text-anchor="middle">
+    <text x="256" y="130">3×4</text>
+    <text x="381" y="274">3²</text>
+    <text x="256" y="412">√36</text>
+    <text x="126" y="274">2+2</text>
+  </g>
+  <g stroke-linecap="round">
+    <line x1="256" y1="256" x2="256" y2="165" stroke="#242424" stroke-width="22"/>
+    <line x1="256" y1="256" x2="350" y2="312" stroke="#242424" stroke-width="15"/>
+    <line x1="256" y1="276" x2="256" y2="120" stroke="#b11f4b" stroke-width="6"/>
+  </g>
+  <circle cx="256" cy="256" r="17" fill="#b11f4b"/>
+  <circle cx="256" cy="256" r="7" fill="#ffffff"/>
+</svg>

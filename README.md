@@ -1,0 +1,33 @@
+# Equation Clock PWA
+
+Customizable analog clocks that use randomized mathematical equations instead of hour numbers.
+Add multiple clocks, assign each one an IANA time zone, and give every clock its own appearance.
+
+Customization includes:
+
+- Standard wall, grandfather, cuckoo, and old-fashioned bell alarm clock bodies
+- Round, rounded-square, octagonal, and arched frames
+- Device pictures stored locally as clock-face backgrounds
+- Picture position, zoom, opacity, and readability-overlay controls
+- Desktop hover actions and a touch-friendly three-dot menu for new equations, customization, and removal
+
+## Run locally
+
+The service worker and install behavior require the app to be served over HTTP rather than opened
+directly as a file.
+
+```powershell
+cd C:\Users\jolurie\Desktop\Analog-math-clock
+python -m http.server 8080
+```
+
+Then open `http://localhost:8080`.
+
+## Install
+
+- On Chromium browsers, use the Install button when it appears.
+- On iPhone or iPad, open the site in Safari, tap Share, and select **Add to Home Screen**.
+
+The first clock uses the device's local system time. Additional clocks can use any time zone
+offered by the browser. The app works offline after its first successful load and stores clocks
+and appearance preferences locally on the device.
