@@ -55,14 +55,13 @@ When an updated service worker is available, the running app displays **Update a
 installation bypasses HTTP caches, and normal online use refreshes cached resources while
 retaining offline fallbacks.
 
-## GitHub Pages
+## Website
 
-The repository can be published directly from the `main` branch and repository root. Its public
-GitHub Pages address is:
+The repository is published from the `main` branch and repository root. The public website is:
 
-`https://luriejoe.github.io/analog-math-clock/`
+`https://analogmathclock.com/`
 
 Help and policy pages:
 
-- `https://luriejoe.github.io/analog-math-clock/faq/`
-- `https://luriejoe.github.io/analog-math-clock/privacy/`
+- `https://analogmathclock.com/faq/`
+- `https://analogmathclock.com/privacy/`

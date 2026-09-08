@@ -675,16 +675,8 @@ function applyClockSettings(view, clock) {
   view.hands.setAttribute("class", `hands ${clock.settings.handStyle}`);
   view.ticks.hidden = !clock.settings.showTicks;
   view.title.textContent = clock.name;
-  view.zone.textContent = displayTimeZone(clock.timeZone);
   view.svg.setAttribute("aria-label", `${clock.name} equation clock`);
   applyPhotoSettings(view, clock);
-}
-
-function displayTimeZone(timeZone) {
-  if (timeZone === LOCAL_TIME_ZONE) {
-    return `System · ${Intl.DateTimeFormat().resolvedOptions().timeZone.replaceAll("_", " ")}`;
-  }
-  return timeZone.replaceAll("_", " ");
 }
 
 function applyThemePreference(preference, persist = false) {
@@ -719,9 +711,7 @@ function createClockCard(clock) {
   const heading = document.createElement("div");
   const title = document.createElement("h2");
   title.className = "clock-name";
-  const zone = document.createElement("p");
-  zone.className = "clock-zone";
-  heading.append(title, zone);
+  heading.append(title);
 
   const cardActions = document.createElement("div");
   cardActions.className = "card-actions";
@@ -825,7 +815,6 @@ function createClockCard(clock) {
     card,
     display,
     title,
-    zone,
     svg,
     photo: svg.querySelector(".face-photo"),
     photoOverlay: svg.querySelector(".photo-overlay"),
