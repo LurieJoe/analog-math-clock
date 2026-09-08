@@ -251,7 +251,8 @@ body {
 
 body.presentation-mode .app-header,
 body.presentation-mode .clock-card-header,
-body.presentation-mode .clock-footer {
+body.presentation-mode .clock-footer,
+body.presentation-mode .app-footer {
   display: none;
 }
 
@@ -329,6 +330,32 @@ select:focus-visible {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
+}
+
+.app-footer {
+  border-top: 1px solid var(--cp-border);
+}
+
+.app-footer-shell {
+  width: min(calc(100% - 32px), 900px);
+  min-height: 76px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--cp-text-muted);
+  font-size: 0.9rem;
+}
+
+.app-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.app-footer-links a {
+  color: var(--cp-text-muted);
 }
 
 .top-actions {
@@ -714,6 +741,14 @@ noscript {
   .clock-footer {
     flex-wrap: wrap;
     gap: 8px 12px;
+  }
+
+  .app-footer-shell {
+    width: min(calc(100% - 24px), 900px);
+    min-height: auto;
+    padding: 20px 0 max(20px, env(safe-area-inset-bottom));
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .settings-panel {
