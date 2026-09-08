@@ -405,6 +405,31 @@ input[type="checkbox"] {
   color: var(--cp-text-muted);
 }
 
+.update-notification {
+  position: fixed;
+  z-index: 20;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: max(16px, env(safe-area-inset-left));
+  width: min(560px, calc(100% - 32px));
+  margin-left: auto;
+  padding: 16px;
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-panel-strong);
+  box-shadow: var(--cp-shadow);
+}
+
+.update-notification p {
+  margin: 0 0 12px;
+}
+
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 noscript {
   display: block;
   padding: 16px;

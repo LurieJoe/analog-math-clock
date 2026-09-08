@@ -31,3 +31,13 @@ Then open `http://localhost:8080`.
 The first clock uses the device's local system time. Additional clocks can use any time zone
 offered by the browser. The app works offline after its first successful load and stores clocks
 and appearance preferences locally on the device.
+
+When an updated service worker is available, the running app displays **Update and Restart** and
+**Later** choices. Updating activates the downloaded version and reloads the PWA.
+
+## GitHub Pages
+
+The repository can be published directly from the `main` branch and repository root. Its public
+GitHub Pages address is:
+
+`https://luriejoe.github.io/analog-math-clock/`

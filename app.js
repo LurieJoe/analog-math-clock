@@ -85,12 +85,18 @@ const elements = {
   removePictureButton: document.querySelector("#remove-picture-button"),
   resetButton: document.querySelector("#reset-button"),
   installButton: document.querySelector("#install-button"),
-  iosInstallHelp: document.querySelector("#ios-install-help")
+  iosInstallHelp: document.querySelector("#ios-install-help"),
+  updateNotification: document.querySelector("#update-notification"),
+  updateNowButton: document.querySelector("#update-now-button"),
+  updateLaterButton: document.querySelector("#update-later-button")
 };
 
 let clocks = loadClocks();
 let activeClockId = null;
 let deferredInstallPrompt = null;
+let waitingServiceWorker = null;
+let serviceWorkerRegistration = null;
+let reloadingForUpdate = false;
 const clockViews = new Map();
 
 function openPhotoDatabase() {
@@ -810,11 +816,60 @@ const isStandalone =
   window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 elements.iosInstallHelp.hidden = !(isIos && !isStandalone);
 
+function showUpdateNotification(worker) {
+  waitingServiceWorker = worker;
+  elements.updateNotification.hidden = false;
+}
+
+elements.updateNowButton.addEventListener("click", () => {
+  if (!waitingServiceWorker) return;
+  elements.updateNowButton.disabled = true;
+  waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+});
+
+elements.updateLaterButton.addEventListener("click", () => {
+  elements.updateNotification.hidden = true;
+});
+
 if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloadingForUpdate) return;
+    reloadingForUpdate = true;
+    window.location.reload();
+  });
+
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch((error) => {
-      console.error("Service worker registration failed:", error);
-    });
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then((registration) => {
+        serviceWorkerRegistration = registration;
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          showUpdateNotification(registration.waiting);
+        }
+
+        registration.addEventListener("updatefound", () => {
+          const installingWorker = registration.installing;
+          if (!installingWorker) return;
+          installingWorker.addEventListener("statechange", () => {
+            if (
+              installingWorker.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              showUpdateNotification(installingWorker);
+            }
+          });
+        });
+
+        registration.update();
+        window.setInterval(() => registration.update(), 30 * 60 * 1000);
+      })
+      .catch((error) => {
+        console.error("Service worker registration failed:", error);
+      });
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") serviceWorkerRegistration?.update();
   });
 }
 
