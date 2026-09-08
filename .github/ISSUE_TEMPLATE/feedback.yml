@@ -1,11 +1,11 @@
 name: Share feedback or an idea
-description: Suggest a feature or tell us how Math Clock could improve.
+description: Suggest a feature or tell us how Analog Math Clock could improve.
 title: "[Feedback] "
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve Math Clock. Please do not attach a .mathclock backup or a private clock-face picture.
+        Thanks for helping improve Analog Math Clock. Please do not attach a .mathclock backup or a private clock-face picture.
   - type: dropdown
     id: feedback-type
     attributes:

@@ -1,6 +1,6 @@
-# Math Clock PWA
+# Analog Math Clock PWA
 
-Customizable analog clocks that use randomized mathematical equations instead of hour numbers.
+Analog Math Clock provides customizable analog clocks that use randomized mathematical equations instead of hour numbers.
 Add multiple clocks, assign each one an IANA time zone, and give every clock its own appearance.
 
 Customization includes:

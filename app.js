@@ -1562,7 +1562,7 @@ function triggerAlarm(alarm, clock, date) {
     Notification.permission === "granted"
   ) {
     try {
-      new Notification(alarm.label || "Math Clock alarm", {
+      new Notification(alarm.label || "Analog Math Clock alarm", {
         body: `${alarm.time} · ${clock.name}`,
         icon: "./icons/icon-192.png"
       });
@@ -1917,7 +1917,7 @@ function showInstallInstructions() {
     introduction = "Your browser did not provide its automatic installation prompt.";
     steps = [
       "Open the browser menu.",
-      "Choose Install Math Clock, Install app, or Add to Home screen.",
+      "Choose Install Analog Math Clock, Install app, or Add to Home screen.",
       "Follow the browser’s confirmation."
     ];
   }

@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Math Clock",
-  "short_name": "Math Clock",
-  "description": "Customizable math clocks with learning mode, alarms, chimes, backups, world time, photos, presets, and accessible display options.",
+  "name": "Analog Math Clock",
+  "short_name": "Analog Math Clock",
+  "description": "Analog Math Clock is a customizable analog clock PWA with randomized equations, learning mode, alarms, chimes, backups, world time, photos, presets, and accessible display options.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
