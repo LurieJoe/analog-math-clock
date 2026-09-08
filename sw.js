@@ -1,10 +1,13 @@
-const CACHE_NAME = "equation-clock-v24";
+const CACHE_NAME = "equation-clock-v25";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
+  "./site.css",
+  "./faq/",
+  "./privacy/",
   "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

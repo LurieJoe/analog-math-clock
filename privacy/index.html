@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      (() => {
+        const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+        const saved = localStorage.getItem("equation-clock-theme") || "system";
+        const preference = param || saved;
+        const theme =
+          preference === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : preference;
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <title>Privacy Policy — Math Clock</title>
+    <meta
+      name="description"
+      content="How Math Clock stores and handles clocks, preferences, equations, alarms, pictures, backups, and feedback."
+    />
+    <link rel="canonical" href="https://luriejoe.github.io/analog-math-clock/privacy/" />
+    <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../site.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="nav-shell">
+        <a class="brand" href="../">
+          <img src="../icons/icon-192.png" alt="" />
+          <span>Math Clock</span>
+        </a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a class="nav-app" href="../">Open app</a>
+          <a href="../faq/">Help Center</a>
+          <a href="./" aria-current="page">Privacy</a>
+          <a
+            href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
+            target="_blank"
+            rel="noopener"
+          >
+            Feedback
+          </a>
+        </nav>
+      </div>
+    </header>
+    <main id="main" class="page-shell">
+      <p class="eyebrow">Last updated September 8, 2026</p>
+      <h1 class="page-title">Privacy Policy</h1>
+      <p class="lead">
+        Math Clock is designed so that your clocks, equations, alarms, and pictures stay under
+        your control.
+      </p>
+      <article class="section content-card">
+        <div class="callout">
+          <p>
+            <strong>The short version:</strong> Math Clock has no accounts, advertising,
+            behavioral analytics, or application database. Your clocks and pictures stay in
+            local browser storage unless you choose to export or share them.
+          </p>
+        </div>
+        <h2>Information stored by the app</h2>
+        <p>
+          Math Clock stores clock definitions, time zones, appearance preferences, custom
+          equations, alarms, and app settings in your browser's local storage. Uploaded
+          clock-face pictures are stored in the browser's IndexedDB storage. This information
+          remains associated with the browser and website address on the device where you use
+          the app.
+        </p>
+        <h2>Information the app does not collect</h2>
+        <ul>
+          <li>No account, username, password, or sign-in information.</li>
+          <li>No advertising identifier or behavioral tracking.</li>
+          <li>No application analytics about your clocks, equations, alarms, or activity.</li>
+          <li>No cloud copy of your clocks or pictures maintained by the app developer.</li>
+        </ul>
+        <h2>Pictures and local processing</h2>
+        <p>
+          Clock-face pictures selected from your device are read and stored locally by your
+          browser. Positioning, resizing, overlays, clock rendering, equation generation, time
+          calculations, and image exports are performed on your device. Math Clock does not
+          upload pictures to an application server.
+        </p>
+        <h2>Alarms and notifications</h2>
+        <p>
+          Alarm schedules are stored locally. If you request notification permission, your
+          browser or operating system manages that permission and delivery. Math Clock does not
+          operate a remote notification service, and background notification delivery cannot be
+          guaranteed.
+        </p>
+        <h2>Exports, sharing, and backups</h2>
+        <p>
+          PNG and SVG exports and .mathclock backups are created locally. A file leaves the app
+          only when you choose a destination through your browser or operating system. A full
+          backup may contain every clock, custom equation, alarm, preference, and uploaded
+          picture stored by Math Clock, so keep backup files private.
+        </p>
+        <h2>Website hosting</h2>
+        <p>
+          The public website and application files are delivered through GitHub Pages. GitHub
+          and the network services used to reach the site may process standard request
+          information such as an IP address, requested URL, browser details, and timestamps
+          under their own policies. Math Clock does not add application analytics or tracking
+          scripts.
+        </p>
+        <h2>External links and feedback</h2>
+        <p>
+          Help and feedback links may open GitHub. Information you submit there is governed by
+          GitHub's policies and is shared only when you choose to submit it. Do not attach a
+          .mathclock backup or private clock-face picture to a public issue.
+        </p>
+        <h2>Deleting your information</h2>
+        <p>
+          You can remove individual clocks, pictures, custom equations, and alarms from the app.
+          Removing Math Clock site data from your browser deletes locally stored app data in
+          that browser. Before clearing browser storage or uninstalling, export a full backup if
+          you may need the data later.
+        </p>
+        <h2>Changes to this policy</h2>
+        <p>
+          This policy may be updated when the app's behavior or supporting services change. The
+          revision date at the top identifies the current version.
+        </p>
+        <h2>Questions</h2>
+        <p>
+          Use the
+          <a
+            href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
+            target="_blank"
+            rel="noopener"
+          >
+            feedback form
+          </a>
+          for privacy questions or concerns.
+        </p>
+      </article>
+      <div class="button-row">
+        <a class="button primary" href="../">Open Math Clock</a>
+        <a class="button" href="../faq/">Open the Help Center</a>
+      </div>
+    </main>
+    <footer class="site-footer">
+      <div class="footer-shell">
+        <span>© 2026 Math Clock</span>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="../">App</a>
+          <a href="../faq/">Help Center</a>
+          <a
+            href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
+            target="_blank"
+            rel="noopener"
+          >
+            Feedback
+          </a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

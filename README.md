@@ -27,6 +27,7 @@ Customization includes:
 - High contrast, reduced motion, and larger-control accessibility settings
 - Per-clock named alarms with built-in sounds, visual alerts, notifications, and five-minute snooze
 - Optional per-clock hourly chimes with a sound preview
+- In-app Help Center, feedback reporting, and a privacy policy
 
 ## Run locally
 
@@ -60,3 +61,8 @@ The repository can be published directly from the `main` branch and repository r
 GitHub Pages address is:
 
 `https://luriejoe.github.io/analog-math-clock/`
+
+Help and policy pages:
+
+- `https://luriejoe.github.io/analog-math-clock/faq/`
+- `https://luriejoe.github.io/analog-math-clock/privacy/`
