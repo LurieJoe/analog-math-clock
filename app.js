@@ -2,6 +2,9 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const CLOCKS_KEY = "equation-clocks-v2";
 const LEGACY_SETTINGS_KEY = "equation-clock-settings-v1";
 const THEME_KEY = "equation-clock-theme";
+const APP_SETTINGS_KEY = "math-clock-app-settings-v1";
+const CUSTOM_EQUATIONS_KEY = "math-clock-custom-equations-v1";
+const ALARMS_KEY = "math-clock-alarms-v1";
 const PHOTO_DB_NAME = "equation-clock-photos";
 const PHOTO_STORE_NAME = "clock-photos";
 const LOCAL_TIME_ZONE = "local";
@@ -30,7 +33,79 @@ const defaults = {
   photoPositionY: 0,
   photoZoom: 100,
   photoOpacity: 100,
-  photoOverlay: 35
+  photoOverlay: 35,
+  showDate: false,
+  showUtcOffset: false,
+  showDst: false,
+  soundEnabled: true,
+  hourlyChime: false,
+  chimeSound: "chime"
+};
+
+const appDefaults = {
+  learningMode: false,
+  keepAwake: false,
+  highContrast: false,
+  reduceMotion: false,
+  largeControls: false,
+  includeCustomEquations: false
+};
+
+const presets = {
+  modern: {
+    bodyStyle: "wall",
+    faceShape: "round",
+    faceColor: "#ffffff",
+    rimColor: "#242424",
+    equationColor: "#242424",
+    hourColor: "#242424",
+    minuteColor: "#242424",
+    secondColor: "#4f46e5",
+    handStyle: "round"
+  },
+  classroom: {
+    bodyStyle: "wall",
+    faceShape: "square",
+    faceColor: "#ffffff",
+    rimColor: "#4338ca",
+    equationColor: "#242424",
+    hourColor: "#242424",
+    minuteColor: "#242424",
+    secondColor: "#4f46e5",
+    difficulty: "simple"
+  },
+  antique: {
+    bodyStyle: "grandfather",
+    faceShape: "round",
+    faceColor: "#f7f4ef",
+    rimColor: "#5c5c5c",
+    equationColor: "#242424",
+    hourColor: "#242424",
+    minuteColor: "#242424",
+    secondColor: "#b45309",
+    pendulumColor: "#f59e0b"
+  },
+  night: {
+    bodyStyle: "wall",
+    faceShape: "round",
+    faceColor: "#292929",
+    rimColor: "#474747",
+    equationColor: "#dedede",
+    hourColor: "#dedede",
+    minuteColor: "#dedede",
+    secondColor: "#a5b4fc"
+  },
+  playful: {
+    bodyStyle: "cuckoo",
+    faceShape: "octagon",
+    faceColor: "#ffffff",
+    rimColor: "#4f46e5",
+    equationColor: "#242424",
+    hourColor: "#242424",
+    minuteColor: "#4f46e5",
+    secondColor: "#f59e0b",
+    pendulumColor: "#f59e0b"
+  }
 };
 
 const equationPools = {
@@ -81,6 +156,9 @@ const equationPools = {
 const elements = {
   grid: document.querySelector("#clocks-grid"),
   addClockButton: document.querySelector("#add-clock-button"),
+  toolsButton: document.querySelector("#tools-button"),
+  presentationButton: document.querySelector("#presentation-button"),
+  presentationExit: document.querySelector("#presentation-exit"),
   settingsPanel: document.querySelector("#settings-panel"),
   closeSettings: document.querySelector("#close-settings"),
   settingsForm: document.querySelector("#settings-form"),
@@ -89,6 +167,7 @@ const elements = {
   facePicture: document.querySelector("#face-picture"),
   removePictureButton: document.querySelector("#remove-picture-button"),
   pendulumSettings: document.querySelector("#pendulum-settings"),
+  applyPresetButton: document.querySelector("#apply-preset-button"),
   resetButton: document.querySelector("#reset-button"),
   installButton: document.querySelector("#install-button"),
   installNotification: document.querySelector("#install-notification"),
@@ -98,17 +177,72 @@ const elements = {
   installInstructionsDone: document.querySelector("#install-instructions-done"),
   updateNotification: document.querySelector("#update-notification"),
   updateNowButton: document.querySelector("#update-now-button"),
-  updateLaterButton: document.querySelector("#update-later-button")
+  updateLaterButton: document.querySelector("#update-later-button"),
+  toolsPanel: document.querySelector("#tools-panel"),
+  closeTools: document.querySelector("#close-tools"),
+  learningMode: document.querySelector("#learning-mode"),
+  keepAwake: document.querySelector("#keep-awake"),
+  highContrast: document.querySelector("#high-contrast"),
+  reduceMotion: document.querySelector("#reduce-motion"),
+  largeControls: document.querySelector("#large-controls"),
+  exportBackupButton: document.querySelector("#export-backup-button"),
+  restoreMode: document.querySelector("#restore-mode"),
+  restoreFile: document.querySelector("#restore-file"),
+  restoreBackupButton: document.querySelector("#restore-backup-button"),
+  backupStatus: document.querySelector("#backup-status"),
+  includeCustomEquations: document.querySelector("#include-custom-equations"),
+  customEquationHour: document.querySelector("#custom-equation-hour"),
+  customEquationText: document.querySelector("#custom-equation-text"),
+  customEquationExplanation: document.querySelector("#custom-equation-explanation"),
+  addCustomEquation: document.querySelector("#add-custom-equation"),
+  customEquationList: document.querySelector("#custom-equation-list"),
+  notificationPermission: document.querySelector("#notification-permission"),
+  alarmClock: document.querySelector("#alarm-clock"),
+  alarmTime: document.querySelector("#alarm-time"),
+  alarmLabel: document.querySelector("#alarm-label"),
+  alarmSound: document.querySelector("#alarm-sound"),
+  addAlarm: document.querySelector("#add-alarm"),
+  alarmList: document.querySelector("#alarm-list"),
+  alarmNotification: document.querySelector("#alarm-notification"),
+  activeAlarmLabel: document.querySelector("#active-alarm-label"),
+  activeAlarmTime: document.querySelector("#active-alarm-time"),
+  snoozeAlarm: document.querySelector("#snooze-alarm"),
+  dismissAlarm: document.querySelector("#dismiss-alarm"),
+  learningNotification: document.querySelector("#learning-notification"),
+  learningExpression: document.querySelector("#learning-expression"),
+  learningExplanation: document.querySelector("#learning-explanation"),
+  closeLearning: document.querySelector("#close-learning")
 };
 
 let clocks = loadClocks();
 let activeClockId = null;
 let themePreference = localStorage.getItem(THEME_KEY) || "system";
+let appSettings = loadJson(APP_SETTINGS_KEY, appDefaults);
+let customEquations = loadJson(CUSTOM_EQUATIONS_KEY, {});
+let alarms = loadJson(ALARMS_KEY, []);
 let deferredInstallPrompt = null;
 let waitingServiceWorker = null;
 let serviceWorkerRegistration = null;
 let reloadingForUpdate = false;
+let wakeLockSentinel = null;
+let wakeLockRequest = null;
+let audioContext = null;
+let activeAlarm = null;
+let snoozedAlarm = null;
+let alarmPreviousFocus = null;
+let lastScheduleCheckAt = Date.now();
+const lastChimeKeys = new Map();
 const clockViews = new Map();
+
+function loadJson(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    if (Array.isArray(fallback)) return Array.isArray(value) ? value : fallback;
+    return value && typeof value === "object" ? { ...fallback, ...value } : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 function openPhotoDatabase() {
   return new Promise((resolve, reject) => {
@@ -144,6 +278,41 @@ function getClockPhoto(clockId) {
 
 function deleteClockPhoto(clockId) {
   return usePhotoStore("readwrite", (store) => store.delete(clockId));
+}
+
+function clearClockPhotos() {
+  return usePhotoStore("readwrite", (store) => store.clear());
+}
+
+async function replaceClockPhotos(entries) {
+  const database = await openPhotoDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(PHOTO_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(PHOTO_STORE_NAME);
+    store.clear();
+    entries.forEach(({ clockId, blob }) => store.put(blob, clockId));
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error);
+    };
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error || new Error("Photo replacement was aborted"));
+    };
+  });
+}
+
+function readBlobAsDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
 
 function createId() {
@@ -217,7 +386,12 @@ function randomIndex(length) {
 
 function randomizeEquations(clock) {
   clock.equations = Array.from({ length: 12 }, (_, index) => {
-    const pool = equationPools[clock.settings.difficulty][index + 1];
+    const hour = index + 1;
+    const builtIn = equationPools[clock.settings.difficulty][hour];
+    const custom = appSettings.includeCustomEquations
+      ? (customEquations[hour] || []).map((item) => item.expression)
+      : [];
+    const pool = [...builtIn, ...custom];
     const previous = clock.equations[index];
     const candidates = pool.filter((equation) => equation !== previous);
     return candidates[randomIndex(candidates.length)];
@@ -342,6 +516,7 @@ function boxFitsSafeCircle(box, safeRadius) {
 
 function renderEquations(view, clock) {
   view.equations.replaceChildren();
+  view.equations.setAttribute("aria-hidden", String(!appSettings.learningMode));
   if (!clock.equations.length) randomizeEquations(clock);
 
   clock.equations.forEach((equation, index) => {
@@ -356,6 +531,17 @@ function renderEquations(view, clock) {
     });
     text.style.fontSize = `${clock.settings.equationSize}px`;
     text.textContent = equation;
+    if (appSettings.learningMode) {
+      text.setAttribute("role", "button");
+      text.setAttribute("tabindex", "0");
+      text.setAttribute("aria-label", `Explain ${equation}, which equals ${hour}`);
+      text.classList.add("learning-enabled");
+      const explain = () => showEquationExplanation(equation, hour);
+      text.addEventListener("click", explain);
+      text.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") explain();
+      });
+    }
     label.append(text);
     view.equations.append(label);
 
@@ -380,6 +566,46 @@ function renderEquations(view, clock) {
       box = text.getBBox();
     }
   });
+}
+
+function explainExpression(expression, result) {
+  const custom = (customEquations[result] || []).find((item) => item.expression === expression);
+  if (custom?.explanation) return custom.explanation;
+  if (expression.startsWith("√")) {
+    return `The square root asks which positive number multiplied by itself gives the value inside the radical. This expression equals ${result}.`;
+  }
+  if (expression.startsWith("∛")) {
+    return `The cube root asks which number multiplied by itself three times gives the value inside the radical. This expression equals ${result}.`;
+  }
+  if (expression.includes("log")) {
+    return `A logarithm asks which exponent produces the displayed value from the given base. The answer here is ${result}.`;
+  }
+  if (expression.includes("!")) {
+    return `The factorial symbol multiplies a whole number by every positive whole number below it. After completing the remaining operations, the result is ${result}.`;
+  }
+  if (/[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(expression)) {
+    return `Evaluate the exponent first, then complete any multiplication, division, addition, or subtraction. The result is ${result}.`;
+  }
+  if (expression.includes("÷")) {
+    return `Divide the number on the left by the number on the right. The quotient is ${result}.`;
+  }
+  if (expression.includes("×")) {
+    return `Multiply the two values. Their product is ${result}.`;
+  }
+  if (expression.includes("+")) {
+    return `Add the values together. Their sum is ${result}.`;
+  }
+  if (expression.includes("−")) {
+    return `Subtract the value on the right from the value on the left. The difference is ${result}.`;
+  }
+  return `This mathematical expression evaluates to ${result}.`;
+}
+
+function showEquationExplanation(expression, result) {
+  elements.learningExpression.textContent = `${expression} = ${result}`;
+  elements.learningExplanation.textContent = explainExpression(expression, result);
+  elements.learningNotification.hidden = false;
+  elements.closeLearning.focus();
 }
 
 function applyPhotoSettings(view, clock) {
@@ -488,12 +714,18 @@ function createClockCard(clock) {
     renderEquations(clockViews.get(clock.id), clock);
   };
   const newEquations = createActionButton("New equations", "small-button", randomizeClock);
+  const exportPng = createActionButton("Export PNG", "small-button", () =>
+    exportClock(clock, "png")
+  );
+  const exportSvg = createActionButton("Export SVG", "small-button", () =>
+    exportClock(clock, "svg")
+  );
   const customize = createActionButton("Customize", "small-button", () => openSettings(clock.id));
   const remove = createActionButton("Remove", "small-button danger-button", () =>
     removeClock(clock.id)
   );
   remove.hidden = clocks.length === 1;
-  cardActions.append(newEquations, customize, remove);
+  cardActions.append(newEquations, exportPng, exportSvg, customize, remove);
 
   const menuButton = createActionButton("⋯", "mobile-menu-button", (event) => {
     event.stopPropagation();
@@ -522,8 +754,20 @@ function createClockCard(clock) {
     "mobile-action-button mobile-danger-button",
     () => removeClock(clock.id)
   );
+  const mobileExportPng = createActionButton("Export PNG", "mobile-action-button", () =>
+    exportClock(clock, "png")
+  );
+  const mobileExportSvg = createActionButton("Export SVG", "mobile-action-button", () =>
+    exportClock(clock, "svg")
+  );
   mobileRemove.hidden = clocks.length === 1;
-  mobileMenu.append(mobileNewEquations, mobileCustomize, mobileRemove);
+  mobileMenu.append(
+    mobileNewEquations,
+    mobileExportPng,
+    mobileExportSvg,
+    mobileCustomize,
+    mobileRemove
+  );
 
   const mobileActions = document.createElement("div");
   mobileActions.className = "mobile-actions";
@@ -554,7 +798,9 @@ function createClockCard(clock) {
   footer.className = "clock-footer";
   const digitalTime = document.createElement("p");
   digitalTime.className = "digital-time";
-  footer.append(digitalTime);
+  const clockDetails = document.createElement("p");
+  clockDetails.className = "clock-details";
+  footer.append(digitalTime, clockDetails);
 
   card.append(header, wrap, footer);
   elements.grid.append(card);
@@ -574,6 +820,7 @@ function createClockCard(clock) {
     minuteHand: svg.querySelector(".minute-hand"),
     secondHand: svg.querySelector(".second-hand"),
     digitalTime,
+    clockDetails,
     photoUrl: null,
     lastDisplayedSecond: -1
   };
@@ -635,6 +882,49 @@ function formatDigitalTime(date, timeZone) {
   return new Intl.DateTimeFormat(undefined, options).format(date);
 }
 
+function getUtcOffsetMinutes(date, timeZone) {
+  if (timeZone === LOCAL_TIME_ZONE) return -date.getTimezoneOffset();
+  const name = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "longOffset"
+  })
+    .formatToParts(date)
+    .find((part) => part.type === "timeZoneName")?.value;
+  if (!name || name === "GMT") return 0;
+  const match = name.match(/GMT([+-])(\d{2}):?(\d{2})?/);
+  if (!match) return 0;
+  const minutes = Number(match[2]) * 60 + Number(match[3] || 0);
+  return match[1] === "-" ? -minutes : minutes;
+}
+
+function formatUtcOffset(minutes) {
+  const sign = minutes >= 0 ? "+" : "−";
+  const absolute = Math.abs(minutes);
+  const hours = String(Math.floor(absolute / 60)).padStart(2, "0");
+  const remainder = String(absolute % 60).padStart(2, "0");
+  return `UTC${sign}${hours}:${remainder}`;
+}
+
+function getClockDetails(date, clock) {
+  const details = [];
+  const options = { weekday: "long", month: "short", day: "numeric" };
+  if (clock.timeZone !== LOCAL_TIME_ZONE) options.timeZone = clock.timeZone;
+  if (clock.settings.showDate) {
+    details.push(new Intl.DateTimeFormat(undefined, options).format(date));
+  }
+  const currentOffset = getUtcOffsetMinutes(date, clock.timeZone);
+  if (clock.settings.showUtcOffset) details.push(formatUtcOffset(currentOffset));
+  if (clock.settings.showDst) {
+    const zoneOptions = { timeZoneName: "long" };
+    if (clock.timeZone !== LOCAL_TIME_ZONE) zoneOptions.timeZone = clock.timeZone;
+    const zoneName = new Intl.DateTimeFormat(undefined, zoneOptions)
+      .formatToParts(date)
+      .find((part) => part.type === "timeZoneName")?.value;
+    if (zoneName) details.push(zoneName);
+  }
+  return details.join(" · ");
+}
+
 function updateClocks() {
   const now = new Date();
   const milliseconds = now.getMilliseconds();
@@ -654,6 +944,8 @@ function updateClocks() {
 
     if (parts.second !== view.lastDisplayedSecond) {
       view.digitalTime.textContent = formatDigitalTime(now, clock.timeZone);
+      view.clockDetails.textContent = getClockDetails(now, clock);
+      view.clockDetails.hidden = !view.clockDetails.textContent;
       view.lastDisplayedSecond = parts.second;
     }
   });
@@ -731,7 +1023,13 @@ function readForm() {
       photoPositionY: Number(formData.get("photoPositionY")),
       photoZoom: Number(formData.get("photoZoom")),
       photoOpacity: Number(formData.get("photoOpacity")),
-      photoOverlay: Number(formData.get("photoOverlay"))
+      photoOverlay: Number(formData.get("photoOverlay")),
+      showDate: elements.settingsForm.elements.showDate.checked,
+      showUtcOffset: elements.settingsForm.elements.showUtcOffset.checked,
+      showDst: elements.settingsForm.elements.showDst.checked,
+      soundEnabled: elements.settingsForm.elements.soundEnabled.checked,
+      hourlyChime: elements.settingsForm.elements.hourlyChime.checked,
+      chimeSound: formData.get("chimeSound")
     }
   };
 }
@@ -790,11 +1088,657 @@ async function removeClock(clockId) {
     console.error("Unable to remove the saved clock picture:", error);
   }
   clocks = clocks.filter((clock) => clock.id !== clockId);
+  alarms = alarms.filter((alarm) => alarm.clockId !== clockId);
   saveClocks();
+  saveFeatureData();
   renderAllClocks();
 }
 
+function safeFileName(value) {
+  return value.trim().replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "") || "math-clock";
+}
+
+function downloadFile(file) {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function shareOrDownloadFile(file) {
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: file.name });
+      return;
+    } catch (error) {
+      if (error.name === "AbortError") return;
+    }
+  }
+  downloadFile(file);
+}
+
+async function exportBackup() {
+  elements.backupStatus.textContent = "Preparing backup…";
+  try {
+    const photos = {};
+    for (const clock of clocks) {
+      const photo = await getClockPhoto(clock.id);
+      if (photo) photos[clock.id] = await readBlobAsDataUrl(photo);
+    }
+    const backup = {
+      format: "math-clock-backup",
+      schemaVersion: 1,
+      createdAt: new Date().toISOString(),
+      themePreference,
+      appSettings,
+      clocks: clocks.map(({ equations, ...clock }) => clock),
+      customEquations,
+      alarms,
+      photos
+    };
+    const file = new File(
+      [JSON.stringify(backup)],
+      `math-clock-backup-${new Date().toISOString().slice(0, 10)}.mathclock`,
+      { type: "application/json" }
+    );
+    await shareOrDownloadFile(file);
+    elements.backupStatus.textContent = `Backup created with ${clocks.length} clock${
+      clocks.length === 1 ? "" : "s"
+    }.`;
+  } catch (error) {
+    console.error("Backup failed:", error);
+    elements.backupStatus.textContent = "The backup could not be created.";
+  }
+}
+
+function uniqueClockName(name, existingNames) {
+  if (!existingNames.has(name)) return name;
+  let number = 2;
+  while (existingNames.has(`${name} (${number})`)) number += 1;
+  return `${name} (${number})`;
+}
+
+async function restoreBackup() {
+  const file = elements.restoreFile.files?.[0];
+  if (!file) {
+    elements.backupStatus.textContent = "Choose a .mathclock backup file first.";
+    return;
+  }
+  elements.backupStatus.textContent = "Reading backup…";
+  try {
+    const backup = JSON.parse(await file.text());
+    if (
+      backup?.format !== "math-clock-backup" ||
+      backup.schemaVersion !== 1 ||
+      !Array.isArray(backup.clocks) ||
+      backup.clocks.length === 0
+    ) {
+      throw new Error("Unsupported backup format");
+    }
+
+    const replace = elements.restoreMode.value === "replace";
+    const existingNames = new Set(replace ? [] : clocks.map((clock) => clock.name));
+    const idMap = new Map();
+    const restoredClocks = [];
+    const photoEntries = [];
+    for (const savedClock of backup.clocks) {
+      const id = createId();
+      idMap.set(savedClock.id, id);
+      const name = uniqueClockName(savedClock.name || "Clock", existingNames);
+      existingNames.add(name);
+      restoredClocks.push({
+        id,
+        name,
+        timeZone: savedClock.timeZone || LOCAL_TIME_ZONE,
+        settings: normalizeSettings(savedClock.settings),
+        equations: []
+      });
+      const dataUrl = backup.photos?.[savedClock.id];
+      if (typeof dataUrl === "string" && dataUrl.startsWith("data:image/")) {
+        photoEntries.push({ clockId: id, blob: await (await fetch(dataUrl)).blob() });
+      }
+    }
+
+    const restoredCustomEquations = replace ? {} : { ...customEquations };
+    if (backup.customEquations && typeof backup.customEquations === "object") {
+      for (const [hour, items] of Object.entries(backup.customEquations)) {
+        if (!Array.isArray(items)) continue;
+        restoredCustomEquations[hour] = [
+          ...(restoredCustomEquations[hour] || []),
+          ...items
+        ].slice(0, 100);
+      }
+    }
+    const restoredAlarms = Array.isArray(backup.alarms)
+      ? backup.alarms
+          .filter((alarm) => idMap.has(alarm.clockId))
+          .map((alarm) => ({ ...alarm, id: createId(), clockId: idMap.get(alarm.clockId) }))
+      : [];
+
+    if (replace) {
+      await replaceClockPhotos(photoEntries);
+      clocks = restoredClocks;
+      alarms = restoredAlarms;
+    } else {
+      for (const entry of photoEntries) await saveClockPhoto(entry.clockId, entry.blob);
+      clocks.push(...restoredClocks);
+      alarms.push(...restoredAlarms);
+    }
+    customEquations = restoredCustomEquations;
+    if (backup.appSettings && typeof backup.appSettings === "object") {
+      appSettings = { ...appDefaults, ...appSettings, ...backup.appSettings };
+    }
+    if (["system", "light", "dark"].includes(backup.themePreference)) {
+      applyThemePreference(backup.themePreference, true);
+    }
+    saveClocks();
+    saveFeatureData();
+    applyAppSettings();
+    renderAllClocks();
+    renderToolLists();
+    elements.restoreFile.value = "";
+    elements.backupStatus.textContent = `${backup.clocks.length} clock${
+      backup.clocks.length === 1 ? "" : "s"
+    } restored using ${replace ? "replace" : "merge"} mode.`;
+  } catch (error) {
+    console.error("Restore failed:", error);
+    elements.backupStatus.textContent = "This backup is invalid or could not be restored.";
+  }
+}
+
+function applySelectedPreset() {
+  const clock = clocks.find((item) => item.id === activeClockId);
+  const preset = presets[elements.settingsForm.elements.clockPreset.value];
+  if (!clock || !preset) return;
+  clock.settings = normalizeSettings({ ...clock.settings, ...preset });
+  populateForm(clock);
+  renderAllClocks();
+}
+
+function renderCustomEquationList() {
+  const items = Object.entries(customEquations)
+    .flatMap(([hour, equations]) => equations.map((item, index) => ({ ...item, hour, index })))
+    .sort((a, b) => Number(a.hour) - Number(b.hour));
+  elements.customEquationList.replaceChildren(
+    ...items.map((item) => {
+      const row = document.createElement("div");
+      row.className = "compact-list-row";
+      const text = document.createElement("span");
+      text.textContent = `${item.hour}: ${item.expression}`;
+      const remove = createActionButton("Remove", "text-button", () => {
+        customEquations[item.hour].splice(item.index, 1);
+        if (!customEquations[item.hour].length) delete customEquations[item.hour];
+        saveFeatureData();
+        renderCustomEquationList();
+      });
+      row.append(text, remove);
+      return row;
+    })
+  );
+  if (!items.length) elements.customEquationList.textContent = "No custom equations yet.";
+}
+
+async function createExportSvg(clock, view) {
+  const clone = view.svg.cloneNode(true);
+  clone.setAttribute("xmlns", SVG_NS);
+  clone.setAttribute("width", "1024");
+  clone.setAttribute("height", "1024");
+  const style = createSvgElement("style");
+  style.textContent = `
+    .hand { transform-origin: 320px 320px; transform-box: view-box; }
+    .equation { text-anchor: middle; dominant-baseline: middle; }
+  `;
+  clone.prepend(style);
+  clone.querySelectorAll(".clock-rim").forEach((element) => {
+    element.setAttribute("fill", clock.settings.rimColor);
+    element.setAttribute("stroke", clock.settings.equationColor);
+    element.setAttribute("stroke-width", "2");
+  });
+  clone.querySelectorAll(".clock-face").forEach((element) => {
+    element.setAttribute("fill", clock.settings.faceColor);
+  });
+  clone.querySelectorAll(".tick").forEach((element) => {
+    element.setAttribute("stroke", clock.settings.equationColor);
+    element.setAttribute("stroke-width", element.classList.contains("major") ? "4" : "2");
+    element.setAttribute("opacity", element.classList.contains("major") ? "0.65" : "0.42");
+  });
+  if (!clock.settings.showTicks) clone.querySelector(".tick-marks")?.remove();
+  clone.querySelectorAll(".equation").forEach((element) => {
+    element.setAttribute("fill", clock.settings.equationColor);
+    element.setAttribute("font-family", "Georgia, Times New Roman, serif");
+    element.setAttribute("font-weight", "700");
+    element.setAttribute("text-anchor", "middle");
+    element.setAttribute("dominant-baseline", "middle");
+  });
+  const hourHand = clone.querySelector(".hour-hand");
+  hourHand.setAttribute("stroke", clock.settings.hourColor);
+  hourHand.setAttribute(
+    "stroke-width",
+    String(clock.settings.handStyle === "tapered" ? clock.settings.handWidth * 0.72 : clock.settings.handWidth)
+  );
+  const minuteHand = clone.querySelector(".minute-hand");
+  minuteHand.setAttribute("stroke", clock.settings.minuteColor);
+  const minuteWidth = Math.max(5, clock.settings.handWidth - 4);
+  minuteHand.setAttribute(
+    "stroke-width",
+    String(clock.settings.handStyle === "tapered" ? minuteWidth * 0.72 : minuteWidth)
+  );
+  const secondHand = clone.querySelector(".second-hand");
+  secondHand.setAttribute("stroke", clock.settings.secondColor);
+  secondHand.setAttribute("stroke-width", "3");
+  if (clock.settings.handStyle !== "square") {
+    [hourHand, minuteHand, secondHand].forEach((hand) =>
+      hand.setAttribute("stroke-linecap", "round")
+    );
+  }
+  clone.querySelector(".center-pin-outer").setAttribute("fill", clock.settings.secondColor);
+  clone.querySelector(".center-pin").setAttribute("fill", clock.settings.faceColor);
+  const photo = await getClockPhoto(clock.id);
+  const photoElement = clone.querySelector(".face-photo");
+  if (photo) {
+    photoElement.removeAttribute("hidden");
+    photoElement.setAttribute("href", await readBlobAsDataUrl(photo));
+  } else {
+    photoElement.remove();
+  }
+  const overlay = clone.querySelector(".photo-overlay");
+  if (overlay) overlay.setAttribute("fill", getComputedStyle(view.photoOverlay).fill);
+  return new XMLSerializer().serializeToString(clone);
+}
+
+async function exportClock(clock, format) {
+  try {
+    const view = clockViews.get(clock.id);
+    const source = await createExportSvg(clock, view);
+    if (format === "svg") {
+      await shareOrDownloadFile(
+        new File([source], `${safeFileName(clock.name)}.svg`, { type: "image/svg+xml" })
+      );
+      return;
+    }
+    const svgBlob = new Blob([source], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(svgBlob);
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 1024;
+    canvas.getContext("2d").drawImage(image, 0, 0, 1024, 1024);
+    URL.revokeObjectURL(url);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    await shareOrDownloadFile(
+      new File([blob], `${safeFileName(clock.name)}.png`, { type: "image/png" })
+    );
+  } catch (error) {
+    console.error("Clock export failed:", error);
+    window.alert("The clock image could not be exported.");
+  }
+}
+
+function saveFeatureData() {
+  localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(appSettings));
+  localStorage.setItem(CUSTOM_EQUATIONS_KEY, JSON.stringify(customEquations));
+  localStorage.setItem(ALARMS_KEY, JSON.stringify(alarms));
+}
+
+function applyAppSettings() {
+  document.documentElement.toggleAttribute("data-high-contrast", appSettings.highContrast);
+  document.documentElement.toggleAttribute("data-reduce-motion", appSettings.reduceMotion);
+  document.documentElement.toggleAttribute("data-large-controls", appSettings.largeControls);
+  elements.learningMode.checked = appSettings.learningMode;
+  elements.keepAwake.checked = appSettings.keepAwake;
+  elements.highContrast.checked = appSettings.highContrast;
+  elements.reduceMotion.checked = appSettings.reduceMotion;
+  elements.largeControls.checked = appSettings.largeControls;
+  elements.includeCustomEquations.checked = appSettings.includeCustomEquations;
+  if (!("wakeLock" in navigator)) {
+    elements.keepAwake.disabled = true;
+    elements.keepAwake.parentElement.title = "Screen wake lock is not supported by this browser.";
+  }
+}
+
+async function requestWakeLock() {
+  if (
+    !appSettings.keepAwake ||
+    !("wakeLock" in navigator) ||
+    document.hidden ||
+    wakeLockSentinel ||
+    wakeLockRequest
+  ) {
+    return;
+  }
+  try {
+    wakeLockRequest = navigator.wakeLock.request("screen");
+    const sentinel = await wakeLockRequest;
+    wakeLockRequest = null;
+    if (!appSettings.keepAwake || document.hidden) {
+      await sentinel.release();
+      return;
+    }
+    wakeLockSentinel = sentinel;
+    wakeLockSentinel.addEventListener("release", () => {
+      wakeLockSentinel = null;
+    });
+  } catch (error) {
+    wakeLockRequest = null;
+    console.error("Wake lock request failed:", error);
+    elements.keepAwake.checked = false;
+    appSettings.keepAwake = false;
+    saveFeatureData();
+  }
+}
+
+async function releaseWakeLock() {
+  if (!wakeLockSentinel) return;
+  await wakeLockSentinel.release();
+  wakeLockSentinel = null;
+}
+
+function openTools() {
+  renderToolLists();
+  elements.toolsPanel.hidden = false;
+  elements.closeTools.focus();
+}
+
+function closeTools() {
+  elements.toolsPanel.hidden = true;
+  elements.toolsButton.focus();
+}
+
+function enterPresentationMode() {
+  document.body.classList.add("presentation-mode");
+  elements.presentationExit.hidden = false;
+  if ("requestFullscreen" in document.documentElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+}
+
+function exitPresentationMode() {
+  document.body.classList.remove("presentation-mode");
+  elements.presentationExit.hidden = true;
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
+function initializeAudio() {
+  if (!audioContext) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) audioContext = new AudioContextClass();
+  }
+  if (audioContext?.state === "suspended") audioContext.resume();
+}
+
+function playTone(frequency, start, duration, type = "sine", volume = 0.12) {
+  if (!audioContext) return;
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  oscillator.type = type;
+  oscillator.frequency.value = frequency;
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+  oscillator.connect(gain).connect(audioContext.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration);
+}
+
+function playSound(sound) {
+  initializeAudio();
+  if (!audioContext) return;
+  const now = audioContext.currentTime;
+  const patterns = {
+    chime: [[523, 0, 0.45], [659, 0.25, 0.5], [784, 0.5, 0.65]],
+    bell: [[880, 0, 0.8], [660, 0.12, 0.9]],
+    cuckoo: [[523, 0, 0.25], [392, 0.3, 0.35], [523, 0.75, 0.25], [392, 1.05, 0.35]],
+    digital: [[880, 0, 0.18], [880, 0.28, 0.18], [880, 0.56, 0.18]]
+  };
+  (patterns[sound] || patterns.chime).forEach(([frequency, delay, duration]) =>
+    playTone(frequency, now + delay, duration, sound === "digital" ? "square" : "sine")
+  );
+}
+
+function getClockDateKey(date, clock) {
+  const options = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  };
+  if (clock.timeZone !== LOCAL_TIME_ZONE) options.timeZone = clock.timeZone;
+  return new Intl.DateTimeFormat("en-CA", options).format(date);
+}
+
+function triggerAlarm(alarm, clock, date) {
+  activeAlarm = alarm;
+  if (clock.settings.soundEnabled) playSound(alarm.sound);
+  elements.activeAlarmLabel.textContent = alarm.label || "Alarm";
+  elements.activeAlarmTime.textContent = `${alarm.time} · ${clock.name}`;
+  elements.alarmNotification.hidden = false;
+  alarmPreviousFocus = document.activeElement;
+  elements.snoozeAlarm.focus();
+  if (
+    document.hidden &&
+    "Notification" in window &&
+    Notification.permission === "granted"
+  ) {
+    try {
+      new Notification(alarm.label || "Math Clock alarm", {
+        body: `${alarm.time} · ${clock.name}`,
+        icon: "./icons/icon-192.png"
+      });
+    } catch (error) {
+      console.error("Unable to show the alarm notification:", error);
+    }
+  }
+}
+
+function checkChimesAndAlarms(now) {
+  if (snoozedAlarm && now.getTime() >= snoozedAlarm.until) {
+    const alarm = alarms.find((item) => item.id === snoozedAlarm.alarmId);
+    const clock = clocks.find((item) => item.id === snoozedAlarm.clockId);
+    snoozedAlarm = null;
+    if (alarm?.enabled && clock) triggerAlarm(alarm, clock, now);
+  }
+
+  const previousCheck = new Date(lastScheduleCheckAt);
+  const catchUpEnabled = now.getTime() - lastScheduleCheckAt <= 10 * 60 * 1000;
+  clocks.forEach((clock) => {
+    const parts = getClockTimeParts(now, clock.timeZone);
+    const previousParts = getClockTimeParts(previousCheck, clock.timeZone);
+    const dateKey = getClockDateKey(now, clock);
+    if (
+      clock.settings.soundEnabled &&
+      clock.settings.hourlyChime &&
+      parts.minute === 0
+    ) {
+      const key = `${dateKey}-${parts.hour}`;
+      if (lastChimeKeys.get(clock.id) !== key) {
+        lastChimeKeys.set(clock.id, key);
+        playSound(clock.settings.chimeSound);
+      }
+    }
+
+    alarms
+      .filter((alarm) => alarm.enabled && alarm.clockId === clock.id)
+      .forEach((alarm) => {
+        const time = `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(
+          2,
+          "0"
+        )}`;
+        const currentMinutes = parts.hour * 60 + parts.minute;
+        const previousMinutes = previousParts.hour * 60 + previousParts.minute;
+        const alarmMinutes =
+          Number(alarm.time.slice(0, 2)) * 60 + Number(alarm.time.slice(3, 5));
+        const dayChanged = getClockDateKey(previousCheck, clock) !== dateKey;
+        const crossed =
+          catchUpEnabled &&
+          (dayChanged
+            ? alarmMinutes > previousMinutes || alarmMinutes <= currentMinutes
+            : alarmMinutes > previousMinutes && alarmMinutes <= currentMinutes);
+        const triggerKey = `${dateKey}-${alarm.time}`;
+        if ((alarm.time === time || crossed) && alarm.lastTriggered !== triggerKey) {
+          alarm.lastTriggered = triggerKey;
+          saveFeatureData();
+          triggerAlarm(alarm, clock, now);
+        }
+      });
+  });
+  lastScheduleCheckAt = now.getTime();
+}
+
+function renderAlarmList() {
+  elements.alarmClock.replaceChildren(
+    ...clocks.map((clock) => new Option(clock.name, clock.id))
+  );
+  elements.alarmList.replaceChildren(
+    ...alarms.map((alarm) => {
+      const row = document.createElement("div");
+      row.className = "compact-list-row";
+      const clock = clocks.find((item) => item.id === alarm.clockId);
+      const text = document.createElement("span");
+      text.textContent = `${alarm.time} · ${alarm.label || "Alarm"} · ${
+        clock?.name || "Deleted clock"
+      }`;
+      const toggle = document.createElement("input");
+      toggle.type = "checkbox";
+      toggle.checked = alarm.enabled;
+      toggle.setAttribute("aria-label", `Enable ${alarm.label || "alarm"}`);
+      toggle.addEventListener("change", () => {
+        alarm.enabled = toggle.checked;
+        if (!alarm.enabled && snoozedAlarm?.alarmId === alarm.id) snoozedAlarm = null;
+        saveFeatureData();
+      });
+      const remove = createActionButton("Remove", "text-button", () => {
+        alarms = alarms.filter((item) => item.id !== alarm.id);
+        saveFeatureData();
+        renderAlarmList();
+      });
+      row.append(toggle, text, remove);
+      return row;
+    })
+  );
+  if (!alarms.length) elements.alarmList.textContent = "No alarms yet.";
+}
+
+function renderToolLists() {
+  renderAlarmList();
+  renderCustomEquationList();
+  elements.restoreMode.value = "merge";
+}
+
+function dismissActiveAlarm() {
+  activeAlarm = null;
+  elements.alarmNotification.hidden = true;
+  alarmPreviousFocus?.focus?.();
+  alarmPreviousFocus = null;
+}
+
 elements.addClockButton.addEventListener("click", addClock);
+elements.toolsButton.addEventListener("click", openTools);
+elements.closeTools.addEventListener("click", closeTools);
+elements.presentationButton.addEventListener("click", enterPresentationMode);
+elements.presentationExit.addEventListener("click", exitPresentationMode);
+elements.applyPresetButton.addEventListener("click", applySelectedPreset);
+elements.exportBackupButton.addEventListener("click", exportBackup);
+elements.restoreBackupButton.addEventListener("click", restoreBackup);
+elements.closeLearning.addEventListener("click", () => {
+  elements.learningNotification.hidden = true;
+});
+
+elements.learningMode.addEventListener("change", () => {
+  appSettings.learningMode = elements.learningMode.checked;
+  saveFeatureData();
+  clockViews.forEach((view, clockId) => {
+    const clock = clocks.find((item) => item.id === clockId);
+    if (clock) renderEquations(view, clock);
+  });
+});
+elements.includeCustomEquations.addEventListener("change", () => {
+  appSettings.includeCustomEquations = elements.includeCustomEquations.checked;
+  saveFeatureData();
+});
+elements.highContrast.addEventListener("change", () => {
+  appSettings.highContrast = elements.highContrast.checked;
+  saveFeatureData();
+  applyAppSettings();
+});
+elements.reduceMotion.addEventListener("change", () => {
+  appSettings.reduceMotion = elements.reduceMotion.checked;
+  saveFeatureData();
+  applyAppSettings();
+});
+elements.largeControls.addEventListener("change", () => {
+  appSettings.largeControls = elements.largeControls.checked;
+  saveFeatureData();
+  applyAppSettings();
+});
+elements.keepAwake.addEventListener("change", async () => {
+  appSettings.keepAwake = elements.keepAwake.checked;
+  saveFeatureData();
+  if (appSettings.keepAwake) await requestWakeLock();
+  else await releaseWakeLock();
+});
+
+elements.addCustomEquation.addEventListener("click", () => {
+  const hour = elements.customEquationHour.value;
+  const expression = elements.customEquationText.value.trim();
+  const explanation = elements.customEquationExplanation.value.trim();
+  if (!expression) return;
+  customEquations[hour] = customEquations[hour] || [];
+  customEquations[hour].push({ expression, explanation });
+  elements.customEquationText.value = "";
+  elements.customEquationExplanation.value = "";
+  saveFeatureData();
+  renderCustomEquationList();
+});
+
+elements.notificationPermission.addEventListener("click", async () => {
+  if (!("Notification" in window)) {
+    elements.notificationPermission.textContent = "Notifications unavailable";
+    elements.notificationPermission.disabled = true;
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  elements.notificationPermission.textContent =
+    permission === "granted" ? "Notifications enabled" : "Notifications not enabled";
+});
+
+elements.addAlarm.addEventListener("click", () => {
+  if (!elements.alarmClock.value || !elements.alarmTime.value) return;
+  alarms.push({
+    id: createId(),
+    clockId: elements.alarmClock.value,
+    time: elements.alarmTime.value,
+    label: elements.alarmLabel.value.trim() || "Alarm",
+    sound: elements.alarmSound.value,
+    enabled: true,
+    lastTriggered: null
+  });
+  elements.alarmLabel.value = "";
+  saveFeatureData();
+  renderAlarmList();
+});
+elements.snoozeAlarm.addEventListener("click", () => {
+  if (!activeAlarm) return;
+  snoozedAlarm = {
+    alarmId: activeAlarm.id,
+    clockId: activeAlarm.clockId,
+    until: Date.now() + 5 * 60 * 1000
+  };
+  elements.alarmNotification.hidden = true;
+  alarmPreviousFocus?.focus?.();
+  alarmPreviousFocus = null;
+});
+elements.dismissAlarm.addEventListener("click", () => {
+  dismissActiveAlarm();
+});
+
 elements.closeSettings.addEventListener("click", closeSettings);
 elements.facePicture.addEventListener("change", async () => {
   const file = elements.facePicture.files?.[0];
@@ -859,11 +1803,20 @@ document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   closeMobileMenus();
   if (!elements.settingsPanel.hidden) closeSettings();
+  if (!elements.toolsPanel.hidden) closeTools();
+  elements.learningNotification.hidden = true;
+  if (!elements.alarmNotification.hidden) dismissActiveAlarm();
 });
 document.addEventListener("click", closeMobileMenus);
+document.addEventListener("pointerdown", initializeAudio, { once: true });
 
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (themePreference === "system") applyThemePreference("system");
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (appSettings.keepAwake) requestWakeLock();
+  checkChimesAndAlarms(new Date());
 });
 
 window.addEventListener("beforeinstallprompt", (event) => {
@@ -1009,7 +1962,15 @@ if ("serviceWorker" in navigator) {
 }
 
 populateTimeZones();
+for (let hour = 1; hour <= 12; hour += 1) {
+  elements.customEquationHour.add(new Option(String(hour), String(hour)));
+}
 applyThemePreference(themePreference);
 saveClocks();
+saveFeatureData();
+applyAppSettings();
 renderAllClocks();
+renderToolLists();
+if (appSettings.keepAwake) requestWakeLock();
 requestAnimationFrame(updateClocks);
+window.setInterval(() => checkChimesAndAlarms(new Date()), 1000);

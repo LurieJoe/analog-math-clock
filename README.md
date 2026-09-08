@@ -8,12 +8,24 @@ Customization includes:
 - Standard wall, grandfather, cuckoo, and old-fashioned bell alarm clock bodies
 - Round, rounded-square, octagonal, and arched frames
 - A cuckoo bird plus configurable pendulum color, length, and bob shape
+- Per-clock sound control for hourly chimes and alarms
 - Device pictures stored locally as clock-face backgrounds
 - Picture position, zoom, opacity, and readability-overlay controls
 - Desktop hover actions and a touch-friendly three-dot menu for new equations, customization, and removal
 - App-wide Light, Dark, and System appearance modes
 - Indigo interface accents and matching default second-hand and pendulum colors
 - Native installation prompts where supported, with platform-specific manual instructions otherwise
+- Versioned backup and merge/replace restore, including uploaded pictures
+- Modern, classroom, antique, night, and playful presets
+- Swipeable one-clock mobile carousel and clock-only presentation mode
+- Screen wake lock for always-on clock displays
+- PNG and SVG clock-face export
+- Custom equation editing and optional inclusion during randomization
+- Tap-to-learn equation explanations
+- Optional date, weekday, UTC offset, and daylight-saving details
+- High contrast, reduced motion, and larger-control accessibility settings
+- Multiple named alarms with built-in sounds, visual alerts, notifications, and five-minute snooze
+- Optional per-clock hourly chimes
 
 ## Run locally
 

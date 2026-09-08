@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Math Clock",
   "short_name": "Math Clock",
-  "description": "Customizable equation clocks with photos, selectable time zones, frame shapes, and decorative clock bodies.",
+  "description": "Customizable math clocks with learning mode, alarms, chimes, backups, world time, photos, presets, and accessible display options.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

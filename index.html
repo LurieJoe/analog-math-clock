@@ -24,6 +24,7 @@
     />
     <meta name="theme-color" content="#f7f4ef" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Math Clock" />
     <link rel="manifest" href="./manifest.webmanifest" />
@@ -41,6 +42,14 @@
             <h1>Math Clock</h1>
           </div>
           <div class="top-actions">
+            <button class="icon-button" id="tools-button" type="button">
+              <span aria-hidden="true">☰</span>
+              <span>Tools</span>
+            </button>
+            <button class="icon-button" id="presentation-button" type="button">
+              <span aria-hidden="true">⛶</span>
+              <span>Clock-only</span>
+            </button>
             <button class="icon-button" id="add-clock-button" type="button">
               <span aria-hidden="true">＋</span>
               <span>Add clock</span>
@@ -89,6 +98,20 @@
 
           <fieldset>
             <legend>Clock design</legend>
+            <label>
+              Preset
+              <select id="clock-preset" name="clockPreset">
+                <option value="">Custom</option>
+                <option value="modern">Modern Indigo</option>
+                <option value="classroom">Classroom</option>
+                <option value="antique">Antique</option>
+                <option value="night">Night</option>
+                <option value="playful">Playful</option>
+              </select>
+            </label>
+            <button id="apply-preset-button" class="secondary-button" type="button">
+              Apply preset
+            </button>
             <label>
               Clock body
               <select id="body-style" name="bodyStyle">
@@ -263,6 +286,39 @@
             </label>
           </fieldset>
 
+          <fieldset>
+            <legend>World clock details</legend>
+            <label class="checkbox-label">
+              <input id="sound-enabled" name="soundEnabled" type="checkbox" />
+              Enable sounds for this clock
+            </label>
+            <label class="checkbox-label">
+              <input id="show-date" name="showDate" type="checkbox" />
+              Show date and weekday
+            </label>
+            <label class="checkbox-label">
+              <input id="show-utc-offset" name="showUtcOffset" type="checkbox" />
+              Show UTC offset
+            </label>
+            <label class="checkbox-label">
+              <input id="show-dst" name="showDst" type="checkbox" />
+              Show daylight-saving status
+            </label>
+            <label class="checkbox-label">
+              <input id="hourly-chime" name="hourlyChime" type="checkbox" />
+              Play an hourly chime while open
+            </label>
+            <label>
+              Chime sound
+              <select id="chime-sound" name="chimeSound">
+                <option value="chime">Chime</option>
+                <option value="bell">Bell</option>
+                <option value="cuckoo">Cuckoo</option>
+                <option value="digital">Digital</option>
+              </select>
+            </label>
+          </fieldset>
+
           <div class="settings-actions">
             <button id="reset-button" class="secondary-button" type="button">Reset appearance</button>
             <button class="primary-button" type="submit">Save and close</button>
@@ -270,6 +326,148 @@
         </form>
 
       </aside>
+
+      <aside class="settings-panel tools-panel" id="tools-panel" aria-label="Math Clock tools" hidden>
+        <div class="settings-heading">
+          <div>
+            <p class="eyebrow">App tools</p>
+            <h2>Math Clock tools</h2>
+          </div>
+          <button class="close-button" id="close-tools" type="button" aria-label="Close tools">×</button>
+        </div>
+
+        <fieldset>
+          <legend>Display and accessibility</legend>
+          <label class="checkbox-label">
+            <input id="learning-mode" type="checkbox" />
+            Equation learning mode
+          </label>
+          <label class="checkbox-label">
+            <input id="keep-awake" type="checkbox" />
+            Keep the screen awake
+          </label>
+          <label class="checkbox-label">
+            <input id="high-contrast" type="checkbox" />
+            High contrast
+          </label>
+          <label class="checkbox-label">
+            <input id="reduce-motion" type="checkbox" />
+            Reduce motion
+          </label>
+          <label class="checkbox-label">
+            <input id="large-controls" type="checkbox" />
+            Larger controls
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Backup and restore</legend>
+          <button id="export-backup-button" class="primary-button" type="button">
+            Export backup
+          </button>
+          <label>
+            Restore behavior
+            <select id="restore-mode">
+              <option value="merge">Merge with current clocks</option>
+              <option value="replace">Replace everything</option>
+            </select>
+          </label>
+          <label class="file-label">
+            Backup file
+            <input id="restore-file" type="file" accept=".mathclock,application/json" />
+          </label>
+          <button id="restore-backup-button" class="secondary-button" type="button">
+            Restore backup
+          </button>
+          <p class="tool-status" id="backup-status" role="status"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>My equations</legend>
+          <label class="checkbox-label">
+            <input id="include-custom-equations" type="checkbox" />
+            Include my equations when randomizing
+          </label>
+          <label>
+            Clock position
+            <select id="custom-equation-hour"></select>
+          </label>
+          <label>
+            Equation
+            <input id="custom-equation-text" type="text" maxlength="30" placeholder="Example: 6 × 2" />
+          </label>
+          <label>
+            Explanation
+            <input
+              id="custom-equation-explanation"
+              type="text"
+              maxlength="140"
+              placeholder="Six multiplied by two equals twelve."
+            />
+          </label>
+          <button id="add-custom-equation" class="secondary-button" type="button">
+            Add equation
+          </button>
+          <div id="custom-equation-list" class="compact-list"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Alarms</legend>
+          <button id="notification-permission" class="secondary-button" type="button">
+            Enable notifications
+          </button>
+          <label>
+            Clock
+            <select id="alarm-clock"></select>
+          </label>
+          <label>
+            Time
+            <input id="alarm-time" type="time" value="07:00" />
+          </label>
+          <label>
+            Label
+            <input id="alarm-label" type="text" maxlength="50" placeholder="Wake up" />
+          </label>
+          <label>
+            Sound
+            <select id="alarm-sound">
+              <option value="chime">Chime</option>
+              <option value="bell">Bell</option>
+              <option value="cuckoo">Cuckoo</option>
+              <option value="digital">Digital</option>
+            </select>
+          </label>
+          <button id="add-alarm" class="primary-button" type="button">Add alarm</button>
+          <div id="alarm-list" class="compact-list"></div>
+          <p class="tool-note">
+            Alarms are reliable while Math Clock is open. Background notifications are best-effort.
+          </p>
+        </fieldset>
+      </aside>
+
+      <button class="presentation-exit" id="presentation-exit" type="button" hidden>
+        Exit clock-only mode
+      </button>
+
+      <section class="learning-notification" id="learning-notification" role="dialog" hidden>
+        <div class="notification-heading">
+          <h2 id="learning-expression"></h2>
+          <button class="close-button" id="close-learning" type="button" aria-label="Close explanation">
+            ×
+          </button>
+        </div>
+        <p id="learning-explanation"></p>
+      </section>
+
+      <section class="alarm-notification" id="alarm-notification" role="alertdialog" hidden>
+        <p class="eyebrow">Alarm</p>
+        <h2 id="active-alarm-label">Alarm</h2>
+        <p id="active-alarm-time"></p>
+        <div class="update-actions">
+          <button class="primary-button" id="snooze-alarm" type="button">Snooze 5 minutes</button>
+          <button class="secondary-button" id="dismiss-alarm" type="button">Dismiss</button>
+        </div>
+      </section>
 
       <section
         class="install-notification"

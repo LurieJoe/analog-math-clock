@@ -51,8 +51,19 @@ html[data-theme="dark"] {
   --cp-highlight: rgba(165, 180, 252, 0.12);
 }
 
+.clock-details {
+  margin: 0;
+  color: var(--cp-text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 * {
   box-sizing: border-box;
+}
+
+.tools-panel {
+  width: min(480px, calc(100vw - 24px));
 }
 
 html,
@@ -61,11 +72,127 @@ body {
   margin: 0;
 }
 
+input[type="time"] {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--cp-border);
+  border-radius: 0.625rem;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+}
+
 body {
   background: var(--cp-bg);
   color: var(--cp-text);
   font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
   overscroll-behavior: none;
+}
+
+.learning-notification,
+.alarm-notification {
+  padding: 20px;
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-panel-strong);
+  box-shadow: var(--cp-shadow);
+}
+
+.learning-notification p,
+.alarm-notification p {
+  margin: 8px 0 16px;
+  color: var(--cp-text-muted);
+}
+
+.alarm-notification h2 {
+  margin: 4px 0;
+}
+
+.tool-status,
+.tool-note {
+  margin: 0;
+  color: var(--cp-text-muted);
+  font-size: 0.86rem;
+}
+
+.compact-list {
+  display: grid;
+  gap: 6px;
+  color: var(--cp-text-muted);
+  font-size: 0.88rem;
+}
+
+.compact-list-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--cp-border);
+  border-radius: 0.625rem;
+  background: var(--cp-surface-soft);
+}
+
+.text-button {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: var(--cp-danger);
+}
+
+.presentation-exit {
+  position: fixed;
+  z-index: 30;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--cp-border);
+  border-radius: 0.625rem;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  box-shadow: var(--cp-shadow);
+}
+
+body.presentation-mode .app-header,
+body.presentation-mode .clock-card-header,
+body.presentation-mode .clock-footer {
+  display: none;
+}
+
+body.presentation-mode .app-shell {
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+}
+
+body.presentation-mode .clock-card {
+  max-width: min(100vw, 100dvh);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-high-contrast] {
+  --cp-border: var(--cp-text);
+  --cp-border-strong: var(--cp-text);
+  --cp-text-muted: var(--cp-text);
+}
+
+html[data-large-controls] button,
+html[data-large-controls] select,
+html[data-large-controls] input {
+  min-height: 52px;
+  font-size: 1.05rem;
+}
+
+html[data-reduce-motion] *,
+html[data-reduce-motion] *::before,
+html[data-reduce-motion] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
 }
 
 button,
@@ -199,6 +326,17 @@ select:focus-visible {
   text-anchor: middle;
   dominant-baseline: middle;
   user-select: none;
+}
+
+.equation.learning-enabled {
+  cursor: help;
+}
+
+.equation.learning-enabled:hover,
+.equation.learning-enabled:focus {
+  fill: var(--cp-accent);
+  outline: none;
+  text-decoration: underline;
 }
 
 .hand {
@@ -393,7 +531,9 @@ input[type="checkbox"] {
 }
 
 .install-notification,
-.update-notification {
+.update-notification,
+.learning-notification,
+.alarm-notification {
   position: fixed;
   z-index: 20;
   right: max(16px, env(safe-area-inset-right));
@@ -996,7 +1136,9 @@ input[type="file"] {
   }
 
   .clock-card {
+    flex: 0 0 100%;
     padding: 12px;
+    scroll-snap-align: center;
   }
 
   .clock-card-header {
@@ -1009,6 +1151,23 @@ input[type="file"] {
 
   .settings-actions {
     grid-template-columns: 1fr;
+  }
+
+  .clocks-grid {
+    display: flex;
+    grid-template-columns: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .clocks-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .clock-footer {
+    flex-direction: column;
   }
 }
 
