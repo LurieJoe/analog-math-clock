@@ -16,7 +16,7 @@ Customization includes:
 - Indigo interface accents and matching default second-hand and pendulum colors
 - Native installation prompts where supported, with platform-specific manual instructions otherwise
 - Versioned backup and merge/replace restore, including uploaded pictures
-- Modern, classroom, antique, night, and playful presets
+- Modern, classroom, antique, night, and playful presets with matching sound choices
 - Swipeable one-clock mobile carousel and clock-only presentation mode
 - Screen wake lock for always-on clock displays
 - PNG and SVG clock-face export

@@ -61,7 +61,8 @@ const presets = {
     hourColor: "#242424",
     minuteColor: "#242424",
     secondColor: "#4f46e5",
-    handStyle: "round"
+    handStyle: "round",
+    chimeSound: "digital"
   },
   classroom: {
     bodyStyle: "wall",
@@ -72,7 +73,8 @@ const presets = {
     hourColor: "#242424",
     minuteColor: "#242424",
     secondColor: "#4f46e5",
-    difficulty: "simple"
+    difficulty: "simple",
+    chimeSound: "bell"
   },
   antique: {
     bodyStyle: "grandfather",
@@ -83,7 +85,8 @@ const presets = {
     hourColor: "#242424",
     minuteColor: "#242424",
     secondColor: "#b45309",
-    pendulumColor: "#f59e0b"
+    pendulumColor: "#f59e0b",
+    chimeSound: "chime"
   },
   night: {
     bodyStyle: "wall",
@@ -93,7 +96,8 @@ const presets = {
     equationColor: "#dedede",
     hourColor: "#dedede",
     minuteColor: "#dedede",
-    secondColor: "#a5b4fc"
+    secondColor: "#a5b4fc",
+    chimeSound: "chime"
   },
   playful: {
     bodyStyle: "cuckoo",
@@ -104,7 +108,8 @@ const presets = {
     hourColor: "#242424",
     minuteColor: "#4f46e5",
     secondColor: "#f59e0b",
-    pendulumColor: "#f59e0b"
+    pendulumColor: "#f59e0b",
+    chimeSound: "cuckoo"
   }
 };
 
