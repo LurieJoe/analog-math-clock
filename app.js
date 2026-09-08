@@ -178,6 +178,8 @@ const elements = {
   settingsForm: document.querySelector("#settings-form"),
   timeZone: document.querySelector("#time-zone"),
   equationDifficultySettings: document.querySelector("#equation-difficulty-settings"),
+  equationDifficulty: document.querySelector("#difficulty"),
+  equationDifficultyNote: document.querySelector("#equation-difficulty-note"),
   themePreference: document.querySelector("#theme-preference"),
   facePicture: document.querySelector("#face-picture"),
   removePictureButton: document.querySelector("#remove-picture-button"),
@@ -1154,7 +1156,10 @@ function populateForm(clock) {
 }
 
 function updateNumeralControls(numeralStyle) {
-  elements.equationDifficultySettings.hidden = numeralStyle !== "equations";
+  const equationsOnly = numeralStyle !== "equations";
+  elements.equationDifficulty.disabled = equationsOnly;
+  elements.equationDifficultySettings.classList.toggle("disabled-setting", equationsOnly);
+  elements.equationDifficultyNote.hidden = !equationsOnly;
 }
 
 function readForm() {
@@ -1180,7 +1185,7 @@ function readForm() {
       pendulumLength: Number(formData.get("pendulumLength")),
       pendulumBob: formData.get("pendulumBob"),
       numeralStyle: formData.get("numeralStyle"),
-      difficulty: formData.get("difficulty"),
+      difficulty: elements.equationDifficulty.value,
       photoPositionX: Number(formData.get("photoPositionX")),
       photoPositionY: Number(formData.get("photoPositionY")),
       photoZoom: Number(formData.get("photoZoom")),

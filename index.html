@@ -338,11 +338,18 @@
             </label>
             <label id="equation-difficulty-settings">
               Equation difficulty
-              <select id="difficulty" name="difficulty">
+              <select
+                id="difficulty"
+                name="difficulty"
+                aria-describedby="equation-difficulty-note"
+              >
                 <option value="simple">Simple</option>
                 <option value="mixed">Mixed</option>
                 <option value="advanced">Advanced</option>
               </select>
+              <span id="equation-difficulty-note" class="field-note" hidden>
+                Available only when Number style is set to Equations.
+              </span>
             </label>
           </fieldset>
 
