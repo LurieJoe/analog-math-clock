@@ -791,6 +791,12 @@ function applyClockSettings(view, clock) {
   view.hands.setAttribute("class", `hands ${clock.settings.handStyle}`);
   view.ticks.hidden = !clock.settings.showTicks;
   view.title.textContent = clock.name;
+  const numeralBadge = {
+    binary: "Binary",
+    maya: "Maya"
+  }[clock.settings.numeralStyle];
+  view.numeralBadge.textContent = numeralBadge || "";
+  view.numeralBadge.hidden = !numeralBadge;
   view.newEquations.hidden = clock.settings.numeralStyle !== "equations";
   view.mobileNewEquations.hidden = clock.settings.numeralStyle !== "equations";
   const faceDescription = {
@@ -832,9 +838,12 @@ function createClockCard(clock) {
   const header = document.createElement("header");
   header.className = "clock-card-header";
   const heading = document.createElement("div");
+  heading.className = "clock-heading";
   const title = document.createElement("h2");
   title.className = "clock-name";
-  heading.append(title);
+  const numeralBadge = document.createElement("span");
+  numeralBadge.className = "numeral-style-badge";
+  heading.append(title, numeralBadge);
 
   const cardActions = document.createElement("div");
   cardActions.className = "card-actions";
@@ -938,6 +947,7 @@ function createClockCard(clock) {
     card,
     display,
     title,
+    numeralBadge,
     newEquations,
     mobileNewEquations,
     svg,
