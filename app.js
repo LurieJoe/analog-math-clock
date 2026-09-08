@@ -687,6 +687,7 @@ function applyThemePreference(preference, persist = false) {
         : "light"
       : preference;
   document.documentElement.setAttribute("data-theme", resolved);
+  elements.themePreference.value = preference;
   if (persist) localStorage.setItem(THEME_KEY, preference);
 }
 
@@ -989,7 +990,6 @@ function populateTimeZones() {
 function populateForm(clock) {
   elements.settingsForm.elements.name.value = clock.name;
   elements.settingsForm.elements.timeZone.value = clock.timeZone;
-  elements.themePreference.value = themePreference;
   elements.pendulumSettings.hidden = !["grandfather", "cuckoo"].includes(
     clock.settings.bodyStyle
   );
@@ -1006,7 +1006,6 @@ function readForm() {
   return {
     name: String(formData.get("name")).trim() || "Clock",
     timeZone: formData.get("timeZone"),
-    themePreference: formData.get("themePreference"),
     settings: {
       bodyStyle: formData.get("bodyStyle"),
       faceShape: formData.get("faceShape"),
@@ -1044,7 +1043,6 @@ function previewForm() {
   const clock = clocks.find((item) => item.id === activeClockId);
   if (!clock) return;
   const next = readForm();
-  applyThemePreference(next.themePreference, true);
   const difficultyChanged = next.settings.difficulty !== clock.settings.difficulty;
   const faceShapeChanged = next.settings.faceShape !== clock.settings.faceShape;
   clock.name = next.name;
@@ -1665,6 +1663,9 @@ elements.learningMode.addEventListener("change", () => {
     if (clock) renderEquations(view, clock);
   });
 });
+elements.themePreference.addEventListener("change", () => {
+  applyThemePreference(elements.themePreference.value, true);
+});
 elements.includeCustomEquations.addEventListener("change", () => {
   appSettings.includeCustomEquations = elements.includeCustomEquations.checked;
   saveFeatureData();
@@ -1790,7 +1791,6 @@ elements.settingsForm.addEventListener("submit", (event) => {
   const clock = clocks.find((item) => item.id === activeClockId);
   if (!clock) return;
   const next = readForm();
-  applyThemePreference(next.themePreference, true);
   clock.name = next.name;
   clock.timeZone = next.timeZone;
   clock.settings = next.settings;
