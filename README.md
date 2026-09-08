@@ -13,6 +13,7 @@ Customization includes:
 - Desktop hover actions and a touch-friendly three-dot menu for new equations, customization, and removal
 - App-wide Light, Dark, and System appearance modes
 - Indigo interface accents and matching default second-hand and pendulum colors
+- Native installation prompts where supported, with platform-specific manual instructions otherwise
 
 ## Run locally
 

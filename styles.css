@@ -392,19 +392,7 @@ input[type="checkbox"] {
   gap: 8px;
 }
 
-.install-help {
-  margin-top: 20px;
-  padding: 16px;
-  border: 1px solid var(--cp-border);
-  border-radius: 0.625rem;
-  background: var(--cp-accent-soft);
-}
-
-.install-help p {
-  margin: 6px 0 0;
-  color: var(--cp-text-muted);
-}
-
+.install-notification,
 .update-notification {
   position: fixed;
   z-index: 20;
@@ -418,6 +406,34 @@ input[type="checkbox"] {
   border-radius: 16px;
   background: var(--cp-panel-strong);
   box-shadow: var(--cp-shadow);
+}
+
+.notification-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.notification-heading h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.install-notification p {
+  margin: 0 0 8px;
+  color: var(--cp-text-muted);
+}
+
+.install-notification ol {
+  margin: 0 0 16px;
+  padding-left: 24px;
+  color: var(--cp-text);
+}
+
+.install-notification li + li {
+  margin-top: 6px;
 }
 
 .update-notification p {

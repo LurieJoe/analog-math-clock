@@ -269,11 +269,31 @@
           </div>
         </form>
 
-        <div class="install-help" id="ios-install-help" hidden>
-          <strong>Install on iPhone or iPad</strong>
-          <p>In Safari, tap Share, then choose <em>Add to Home Screen</em>.</p>
-        </div>
       </aside>
+
+      <section
+        class="install-notification"
+        id="install-notification"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="install-notification-title"
+        hidden
+      >
+        <div class="notification-heading">
+          <h2 id="install-notification-title">Install Math Clock</h2>
+          <button
+            class="close-button"
+            id="close-install-notification"
+            type="button"
+            aria-label="Close installation instructions"
+          >
+            ×
+          </button>
+        </div>
+        <p id="install-instructions"></p>
+        <ol id="install-steps"></ol>
+        <button class="primary-button" id="install-instructions-done" type="button">Got it</button>
+      </section>
 
       <section
         class="update-notification"

@@ -91,7 +91,11 @@ const elements = {
   pendulumSettings: document.querySelector("#pendulum-settings"),
   resetButton: document.querySelector("#reset-button"),
   installButton: document.querySelector("#install-button"),
-  iosInstallHelp: document.querySelector("#ios-install-help"),
+  installNotification: document.querySelector("#install-notification"),
+  installInstructions: document.querySelector("#install-instructions"),
+  installSteps: document.querySelector("#install-steps"),
+  closeInstallNotification: document.querySelector("#close-install-notification"),
+  installInstructionsDone: document.querySelector("#install-instructions-done"),
   updateNotification: document.querySelector("#update-notification"),
   updateNowButton: document.querySelector("#update-now-button"),
   updateLaterButton: document.querySelector("#update-later-button")
@@ -867,22 +871,85 @@ window.addEventListener("beforeinstallprompt", (event) => {
   deferredInstallPrompt = event;
   elements.installButton.hidden = false;
 });
+
+function closeInstallInstructions() {
+  elements.installNotification.hidden = true;
+  elements.installButton.focus();
+}
+
+function showInstallInstructions() {
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const isSafari = /safari/i.test(navigator.userAgent) && !/crios|fxios|edgios/i.test(
+    navigator.userAgent
+  );
+  let introduction;
+  let steps;
+
+  if (isIos && isSafari) {
+    introduction = "Safari installs this web app through the Share menu.";
+    steps = [
+      "Tap the Share button in Safari.",
+      "Scroll down and tap Add to Home Screen.",
+      "Turn on Open as Web App if it is shown, then tap Add."
+    ];
+  } else if (isIos) {
+    introduction = "iPhone and iPad installation must be completed from Safari.";
+    steps = [
+      "Copy or share this page address and open it in Safari.",
+      "Tap Safari’s Share button.",
+      "Choose Add to Home Screen, then tap Add."
+    ];
+  } else if (isAndroid) {
+    introduction = "Your browser did not provide its automatic installation prompt.";
+    steps = [
+      "Open the browser’s three-dot menu.",
+      "Choose Install app or Add to Home screen.",
+      "Follow the confirmation shown by your device."
+    ];
+  } else {
+    introduction = "Your browser did not provide its automatic installation prompt.";
+    steps = [
+      "Open the browser menu.",
+      "Choose Install Math Clock, Install app, or Add to Home screen.",
+      "Follow the browser’s confirmation."
+    ];
+  }
+
+  elements.installInstructions.textContent = introduction;
+  elements.installSteps.replaceChildren(
+    ...steps.map((step) => {
+      const item = document.createElement("li");
+      item.textContent = step;
+      return item;
+    })
+  );
+  elements.installNotification.hidden = false;
+  elements.closeInstallNotification.focus();
+}
+
 elements.installButton.addEventListener("click", async () => {
-  if (!deferredInstallPrompt) return;
+  if (!deferredInstallPrompt) {
+    showInstallInstructions();
+    return;
+  }
   deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
+  const choice = await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
-  elements.installButton.hidden = true;
+  if (choice.outcome !== "accepted") elements.installButton.hidden = false;
 });
+elements.closeInstallNotification.addEventListener("click", closeInstallInstructions);
+elements.installInstructionsDone.addEventListener("click", closeInstallInstructions);
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
   elements.installButton.hidden = true;
+  elements.installNotification.hidden = true;
 });
 
 const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone =
   window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-elements.iosInstallHelp.hidden = !(isIos && !isStandalone);
+elements.installButton.hidden = isStandalone;
 
 function showUpdateNotification(worker) {
   waitingServiceWorker = worker;

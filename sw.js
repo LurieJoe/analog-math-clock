@@ -1,4 +1,4 @@
-const CACHE_NAME = "equation-clock-v16";
+const CACHE_NAME = "equation-clock-v17";
 const APP_SHELL = [
   "./",
   "./index.html",
