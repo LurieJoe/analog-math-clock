@@ -694,37 +694,175 @@ function enableLearningLabel(element, ariaLabel, explain) {
   });
 }
 
+const superscriptValues = {
+  "⁰": "0",
+  "¹": "1",
+  "²": "2",
+  "³": "3",
+  "⁴": "4",
+  "⁵": "5",
+  "⁶": "6",
+  "⁷": "7",
+  "⁸": "8",
+  "⁹": "9"
+};
+
+const logarithmBases = {
+  "₂": 2,
+  "₃": 3,
+  "₅": 5
+};
+
+function parseSuperscript(value) {
+  return Number([...value].map((digit) => superscriptValues[digit]).join(""));
+}
+
+function calculateOperation(left, operator, right) {
+  if (operator === "+") return left + right;
+  if (operator === "−") return left - right;
+  if (operator === "×") return left * right;
+  if (operator === "÷") return left / right;
+  return Number.NaN;
+}
+
+function describeOperation(left, operator, right, value) {
+  if (operator === "+") return `add ${left} and ${right}: ${left} + ${right} = ${value}.`;
+  if (operator === "−") return `subtract ${right} from ${left}: ${left} − ${right} = ${value}.`;
+  if (operator === "×") return `multiply ${left} by ${right}: ${left} × ${right} = ${value}.`;
+  return `divide ${left} by ${right}: ${left} ÷ ${right} = ${value}.`;
+}
+
+function capitalizeSentence(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function describePower(base, exponent, value) {
+  if (exponent === 0) {
+    return `${base}⁰ = 1 because every nonzero number raised to the zero power equals 1.`;
+  }
+  if (exponent === 1) {
+    return `${base}¹ = ${base} because raising a number to the first power leaves it unchanged.`;
+  }
+  const factors = Array.from({ length: exponent }, () => base).join(" × ");
+  return `${base} raised to the ${exponent} power means ${factors}, which equals ${value}.`;
+}
+
+function evaluateLearningStep(expression) {
+  if (/^\d+$/.test(expression)) {
+    return { value: Number(expression), explanation: "" };
+  }
+
+  const powerMatch = expression.match(
+    /^(\d+)([⁰¹²³⁴⁵⁶⁷⁸⁹]+)(?: ([+−×÷]) (\d+))?$/
+  );
+  if (powerMatch) {
+    const base = Number(powerMatch[1]);
+    const exponent = parseSuperscript(powerMatch[2]);
+    const powerValue = base ** exponent;
+    const powerExplanation = describePower(base, exponent, powerValue);
+    if (!powerMatch[3]) {
+      return { value: powerValue, explanation: powerExplanation };
+    }
+    const right = Number(powerMatch[4]);
+    const value = calculateOperation(powerValue, powerMatch[3], right);
+    return {
+      value,
+      explanation: `${powerExplanation}\nThen ${describeOperation(
+        powerValue,
+        powerMatch[3],
+        right,
+        value
+      )}`
+    };
+  }
+
+  const operationMatch = expression.match(/^(\d+) ([+−×÷]) (\d+)$/);
+  if (operationMatch) {
+    const left = Number(operationMatch[1]);
+    const right = Number(operationMatch[3]);
+    const value = calculateOperation(left, operationMatch[2], right);
+    return {
+      value,
+      explanation: capitalizeSentence(describeOperation(left, operationMatch[2], right, value))
+    };
+  }
+
+  return null;
+}
+
 function explainExpression(expression, result) {
   const custom = (customEquations[result] || []).find((item) => item.expression === expression);
   if (custom?.explanation) return custom.explanation;
-  if (expression.startsWith("√")) {
-    return `The square root asks which positive number multiplied by itself gives the value inside the radical. This expression equals ${result}.`;
+
+  if (expression === "sin(π⁄2)") {
+    return "sin means sine, a way to describe an angle using a right triangle or circle. π⁄2 radians is 90°, and the sine of 90° is 1.";
   }
-  if (expression.startsWith("∛")) {
-    return `The cube root asks which number multiplied by itself three times gives the value inside the radical. This expression equals ${result}.`;
+
+  if (expression === "ln(e)") {
+    return "ln means natural logarithm. It uses e—a special number approximately equal to 2.718—as its base and asks what power of e produces the number in parentheses. Since e¹ = e, ln(e) = 1.";
   }
-  if (expression.includes("log")) {
-    return `A logarithm asks which exponent produces the displayed value from the given base. The answer here is ${result}.`;
+
+  const logarithmMatch = expression.match(/^log([₂₃₅])(\d+)$/);
+  if (logarithmMatch) {
+    const base = logarithmBases[logarithmMatch[1]];
+    const value = Number(logarithmMatch[2]);
+    return `log means logarithm, and the small ${base} identifies its base. It asks what power of ${base} equals ${value}. Since ${base} raised to the ${result} power equals ${value}, the answer is ${result}.`;
   }
-  if (expression.includes("!")) {
-    return `The factorial symbol multiplies a whole number by every positive whole number below it. After completing the remaining operations, the result is ${result}.`;
+
+  const cubeRootMatch = expression.match(/^∛(\d+)$/);
+  if (cubeRootMatch) {
+    const value = Number(cubeRootMatch[1]);
+    return `The ∛ symbol means cube root: the number that can be multiplied by itself three times to make ${value}. Since ${result} × ${result} × ${result} = ${value}, the answer is ${result}.`;
   }
-  if (/[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(expression)) {
-    return `Evaluate the exponent first, then complete any multiplication, division, addition, or subtraction. The result is ${result}.`;
+
+  const squareRootMatch = expression.match(/^√(?:\((.+)\)|(\d+))$/);
+  if (squareRootMatch) {
+    const radicandExpression = squareRootMatch[1] || squareRootMatch[2];
+    const radicand = evaluateLearningStep(radicandExpression);
+    if (radicand) {
+      const rootStep = `The √ symbol means square root: the positive number that multiplies by itself to make ${radicand.value}. Since ${result} × ${result} = ${radicand.value}, the answer is ${result}.`;
+      return radicand.explanation
+        ? `First evaluate what is under the √ symbol: ${radicand.explanation}\n${rootStep}`
+        : rootStep;
+    }
   }
-  if (expression.includes("÷")) {
-    return `Divide the number on the left by the number on the right. The quotient is ${result}.`;
+
+  const factorialMatch = expression.match(/^(\d)!?(?: ([+−×÷]) (\d+))?$/);
+  if (expression.includes("!") && factorialMatch) {
+    const number = Number(factorialMatch[1]);
+    const factors = Array.from({ length: number }, (_, index) => number - index);
+    const factorialValue = factors.reduce((product, factor) => product * factor, 1);
+    const factorialStep = `${number}! means ${factors.join(" × ")}, which equals ${factorialValue}.`;
+    if (!factorialMatch[2]) return factorialStep;
+    const right = Number(factorialMatch[3]);
+    const value = calculateOperation(factorialValue, factorialMatch[2], right);
+    return `${factorialStep}\nThen ${describeOperation(
+      factorialValue,
+      factorialMatch[2],
+      right,
+      value
+    )}`;
   }
-  if (expression.includes("×")) {
-    return `Multiply the two values. Their product is ${result}.`;
+
+  const groupedMatch = expression.match(/^\((.+)\) ([+−×÷]) (\d+)$/);
+  if (groupedMatch) {
+    const inside = evaluateLearningStep(groupedMatch[1]);
+    if (inside) {
+      const right = Number(groupedMatch[3]);
+      const value = calculateOperation(inside.value, groupedMatch[2], right);
+      return `First evaluate inside the parentheses:\n${inside.explanation}\nThen ${describeOperation(
+        inside.value,
+        groupedMatch[2],
+        right,
+        value
+      )}`;
+    }
   }
-  if (expression.includes("+")) {
-    return `Add the values together. Their sum is ${result}.`;
-  }
-  if (expression.includes("−")) {
-    return `Subtract the value on the right from the value on the left. The difference is ${result}.`;
-  }
-  return `This mathematical expression evaluates to ${result}.`;
+
+  return (
+    evaluateLearningStep(expression)?.explanation ||
+    `Work through the operations in ${expression} using the usual order of operations. The result is ${result}.`
+  );
 }
 
 function showEquationExplanation(expression, result) {

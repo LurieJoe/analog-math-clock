@@ -105,6 +105,11 @@ body {
   color: var(--cp-text-muted);
 }
 
+#learning-explanation {
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
 .alarm-notification h2 {
   margin: 4px 0;
 }
