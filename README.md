@@ -14,6 +14,7 @@ Customization includes:
 - Picture position, zoom, opacity, and readability-overlay controls
 - Desktop hover actions and a touch-friendly three-dot menu for new equations, customization, and removal
 - Compact mobile header with a bottom-sheet menu for app-wide actions
+- Searchable time-zone picker with familiar U.S. region names and abbreviations
 - App-wide Light, Dark, and System appearance modes in Tools
 - Indigo interface accents and matching default second-hand and pendulum colors
 - Native installation prompts where supported, with platform-specific manual instructions otherwise

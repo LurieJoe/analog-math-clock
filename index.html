@@ -142,10 +142,24 @@
               Name
               <input id="clock-name" name="name" type="text" maxlength="40" required />
             </label>
-            <label>
+            <label class="time-zone-search-label">
+              Find a time zone
+              <input
+                id="time-zone-search"
+                type="search"
+                placeholder="Try West Coast, Pacific, London, or Tokyo"
+                autocomplete="off"
+                aria-describedby="time-zone-search-help time-zone-search-status"
+              />
+              <span id="time-zone-search-help" class="field-note">
+                Search by city, U.S. region, or abbreviation.
+              </span>
+            </label>
+            <label class="time-zone-select-label">
               Time zone
               <select id="time-zone" name="timeZone"></select>
             </label>
+            <p id="time-zone-search-status" class="field-note" aria-live="polite"></p>
           </fieldset>
 
           <fieldset>

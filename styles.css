@@ -1380,6 +1380,15 @@ input[type="text"] {
   color: var(--cp-text);
 }
 
+input[type="search"] {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--cp-border);
+  border-radius: 0.625rem;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+}
+
 input[type="file"] {
   width: min(230px, 52vw);
   color: var(--cp-text-muted);
@@ -1387,6 +1396,21 @@ input[type="file"] {
 
 #time-zone {
   width: min(230px, 52vw);
+}
+
+.time-zone-search-label,
+.time-zone-select-label {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+#time-zone-search,
+#time-zone {
+  width: 100%;
+}
+
+#time-zone-search-status {
+  margin: -6px 0 0;
 }
 
 @media (max-width: 640px) {

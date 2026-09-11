@@ -11,6 +11,56 @@ const LOCAL_TIME_ZONE = "local";
 const CENTER = 320;
 const EQUATION_RADIUS = 210;
 
+const commonTimeZones = [
+  {
+    value: LOCAL_TIME_ZONE,
+    label: "System local time",
+    keywords: "device current automatic local"
+  },
+  {
+    value: "UTC",
+    label: "UTC — Coordinated Universal Time",
+    keywords: "gmt greenwich universal zulu"
+  },
+  {
+    value: "America/New_York",
+    label: "U.S. Eastern — New York",
+    keywords:
+      "us united states east coast eastern est edt boston miami washington dc atlanta philadelphia"
+  },
+  {
+    value: "America/Chicago",
+    label: "U.S. Central — Chicago",
+    keywords: "us united states central cst cdt dallas houston minneapolis new orleans"
+  },
+  {
+    value: "America/Denver",
+    label: "U.S. Mountain — Denver",
+    keywords: "us united states mountain mst mdt colorado salt lake city new mexico"
+  },
+  {
+    value: "America/Phoenix",
+    label: "Arizona — Phoenix",
+    keywords: "us united states mountain mst no daylight saving time"
+  },
+  {
+    value: "America/Los_Angeles",
+    label: "U.S. Pacific — Los Angeles (West Coast)",
+    keywords:
+      "us united states west coast pacific pst pdt california san francisco seattle portland washington oregon nevada"
+  },
+  {
+    value: "America/Anchorage",
+    label: "Alaska — Anchorage",
+    keywords: "us united states alaska akst akdt"
+  },
+  {
+    value: "Pacific/Honolulu",
+    label: "Hawaii — Honolulu",
+    keywords: "us united states hawaii hst"
+  }
+];
+
 const defaults = {
   bodyStyle: "wall",
   faceShape: "round",
@@ -177,6 +227,8 @@ const elements = {
   closeSettings: document.querySelector("#close-settings"),
   settingsForm: document.querySelector("#settings-form"),
   timeZone: document.querySelector("#time-zone"),
+  timeZoneSearch: document.querySelector("#time-zone-search"),
+  timeZoneSearchStatus: document.querySelector("#time-zone-search-status"),
   equationDifficultySettings: document.querySelector("#equation-difficulty-settings"),
   equationDifficulty: document.querySelector("#difficulty"),
   equationDifficultyNote: document.querySelector("#equation-difficulty-note"),
@@ -252,6 +304,7 @@ let alarmPreviousFocus = null;
 let lastScheduleCheckAt = Date.now();
 const lastChimeKeys = new Map();
 const clockViews = new Map();
+let timeZoneCatalog = [];
 
 function loadJson(key, fallback) {
   try {
@@ -1251,13 +1304,7 @@ function updateClocks() {
   requestAnimationFrame(updateClocks);
 }
 
-function populateTimeZones() {
-  const localOption = new Option(
-    `System local (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
-    LOCAL_TIME_ZONE
-  );
-  elements.timeZone.add(localOption);
-
+function createTimeZoneCatalog() {
   const zones =
     typeof Intl.supportedValuesOf === "function"
       ? Intl.supportedValuesOf("timeZone")
@@ -1272,13 +1319,127 @@ function populateTimeZones() {
           "Asia/Tokyo",
           "Australia/Sydney"
         ];
-  if (!zones.includes("UTC")) {
-    elements.timeZone.add(new Option("UTC", "UTC"));
+
+  const commonValues = new Set(commonTimeZones.map((zone) => zone.value));
+  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const common = commonTimeZones
+    .filter((zone) => zone.value === LOCAL_TIME_ZONE || zone.value === "UTC" || zones.includes(zone.value))
+    .map((zone) => ({
+      ...zone,
+      label:
+        zone.value === LOCAL_TIME_ZONE
+          ? `System local time — ${localZone.split("/").at(-1).replaceAll("_", " ")}`
+          : zone.label,
+      common: true
+    }));
+  const all = zones
+    .filter((zone) => !commonValues.has(zone))
+    .map((zone) => ({
+      value: zone,
+      label: formatTimeZoneName(zone),
+      keywords: zone.replaceAll("_", " ").replaceAll("/", " "),
+      common: false
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+
+  return [...common, ...all];
+}
+
+function formatTimeZoneName(timeZone) {
+  const parts = timeZone.split("/").map((part) => part.replaceAll("_", " "));
+  if (parts.length === 1) return parts[0];
+  const regionNames = {
+    Africa: "Africa",
+    America: "Americas",
+    Antarctica: "Antarctica",
+    Arctic: "Arctic",
+    Asia: "Asia",
+    Atlantic: "Atlantic",
+    Australia: "Australia",
+    Europe: "Europe",
+    Indian: "Indian Ocean",
+    Pacific: "Pacific"
+  };
+  const region = regionNames[parts[0]] || parts[0];
+  const place = parts.slice(1).reverse().join(", ");
+  return `${place} — ${region}`;
+}
+
+function normalizeTimeZoneSearch(value) {
+  return value
+    .toLocaleLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim();
+}
+
+function renderTimeZoneOptions(query = "", selectedValue = elements.timeZone.value) {
+  const normalizedQuery = normalizeTimeZoneSearch(query);
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+  const matches = timeZoneCatalog.filter((zone) => {
+    if (!terms.length) return true;
+    const searchable = normalizeTimeZoneSearch(
+      `${zone.label} ${zone.value} ${zone.keywords || ""}`
+    );
+    return terms.every((term) => searchable.includes(term));
+  });
+  let selectedZone = timeZoneCatalog.find((zone) => zone.value === selectedValue);
+  if (selectedValue && !selectedZone) {
+    selectedZone = {
+      value: selectedValue,
+      label: formatTimeZoneName(selectedValue),
+      keywords: selectedValue,
+      common: false
+    };
   }
-  zones.forEach((zone) => elements.timeZone.add(new Option(zone.replaceAll("_", " "), zone)));
+  const currentOutsideSearch =
+    selectedZone && !matches.some((zone) => zone.value === selectedZone.value);
+
+  elements.timeZone.replaceChildren();
+  if (currentOutsideSearch) {
+    const currentGroup = document.createElement("optgroup");
+    currentGroup.label = "Current selection";
+    currentGroup.append(new Option(selectedZone.label, selectedZone.value));
+    elements.timeZone.append(currentGroup);
+  }
+
+  const commonMatches = matches.filter((zone) => zone.common);
+  const otherMatches = matches.filter((zone) => !zone.common);
+  if (commonMatches.length) {
+    const commonGroup = document.createElement("optgroup");
+    commonGroup.label = normalizedQuery ? "Common matches" : "Common choices";
+    commonMatches.forEach((zone) => commonGroup.append(new Option(zone.label, zone.value)));
+    elements.timeZone.append(commonGroup);
+  }
+  if (otherMatches.length) {
+    const allGroup = document.createElement("optgroup");
+    allGroup.label = normalizedQuery ? "More matches" : "All time zones";
+    otherMatches.forEach((zone) => allGroup.append(new Option(zone.label, zone.value)));
+    elements.timeZone.append(allGroup);
+  }
+  if (!matches.length) {
+    const noMatch = new Option("No matching time zones", "", false, false);
+    noMatch.disabled = true;
+    elements.timeZone.append(noMatch);
+  }
+
+  if (selectedValue && [...elements.timeZone.options].some((option) => option.value === selectedValue)) {
+    elements.timeZone.value = selectedValue;
+  }
+  elements.timeZone.disabled = !matches.length && !currentOutsideSearch;
+  elements.timeZoneSearchStatus.textContent = normalizedQuery
+    ? `${matches.length} matching time zone${matches.length === 1 ? "" : "s"}.`
+    : `${timeZoneCatalog.length} time zones available.`;
+}
+
+function populateTimeZones() {
+  timeZoneCatalog = createTimeZoneCatalog();
+  renderTimeZoneOptions();
 }
 
 function populateForm(clock) {
+  elements.timeZoneSearch.value = "";
+  renderTimeZoneOptions("", clock.timeZone);
   elements.settingsForm.elements.name.value = clock.name;
   elements.settingsForm.elements.timeZone.value = clock.timeZone;
   elements.pendulumSettings.hidden = !["grandfather", "cuckoo"].includes(
@@ -2117,6 +2278,13 @@ elements.removePictureButton.addEventListener("click", async () => {
 });
 elements.settingsForm.addEventListener("input", previewForm);
 elements.settingsForm.addEventListener("change", previewForm);
+elements.timeZoneSearch.addEventListener("input", (event) => {
+  event.stopPropagation();
+  renderTimeZoneOptions(event.currentTarget.value, elements.timeZone.value);
+});
+elements.timeZoneSearch.addEventListener("change", (event) => {
+  event.stopPropagation();
+});
 elements.settingsForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const clock = clocks.find((item) => item.id === activeClockId);
