@@ -302,6 +302,7 @@ let activeAlarm = null;
 let snoozedAlarm = null;
 let alarmPreviousFocus = null;
 let lastScheduleCheckAt = Date.now();
+let presentationExitTimer = null;
 const lastChimeKeys = new Map();
 const clockViews = new Map();
 let timeZoneCatalog = [];
@@ -1940,15 +1941,37 @@ function closeTools() {
   toolsPreviousFocus = null;
 }
 
+function setPresentationExitVisible(visible) {
+  window.clearTimeout(presentationExitTimer);
+  presentationExitTimer = null;
+  elements.presentationExit.classList.toggle("is-visible", visible);
+  elements.presentationExit.setAttribute("aria-hidden", String(!visible));
+  elements.presentationExit.tabIndex = visible ? 0 : -1;
+  if (visible) {
+    presentationExitTimer = window.setTimeout(() => {
+      setPresentationExitVisible(false);
+    }, 3000);
+  }
+}
+
+function revealPresentationExit(event) {
+  if (!document.body.classList.contains("presentation-mode")) return;
+  if (event.type === "pointermove" && event.pointerType !== "mouse") return;
+  if (event.type === "pointerdown" && event.pointerType === "mouse") return;
+  setPresentationExitVisible(true);
+}
+
 function enterPresentationMode() {
   document.body.classList.add("presentation-mode");
   elements.presentationExit.hidden = false;
+  setPresentationExitVisible(false);
   if ("requestFullscreen" in document.documentElement) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
 }
 
 function exitPresentationMode() {
+  setPresentationExitVisible(false);
   document.body.classList.remove("presentation-mode");
   elements.presentationExit.hidden = true;
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -2140,6 +2163,8 @@ elements.mobileAddClockButton.addEventListener("click", () => {
 elements.closeTools.addEventListener("click", closeTools);
 elements.presentationButton.addEventListener("click", enterPresentationMode);
 elements.presentationExit.addEventListener("click", exitPresentationMode);
+document.addEventListener("pointermove", revealPresentationExit);
+document.addEventListener("pointerdown", revealPresentationExit);
 elements.applyPresetButton.addEventListener("click", applySelectedPreset);
 elements.exportBackupButton.addEventListener("click", exportBackup);
 elements.restoreBackupButton.addEventListener("click", restoreBackup);
@@ -2308,6 +2333,13 @@ elements.resetButton.addEventListener("click", () => {
   renderEquations(view, clock);
 });
 document.addEventListener("keydown", (event) => {
+  if (document.body.classList.contains("presentation-mode")) {
+    if (event.key === "Escape") {
+      exitPresentationMode();
+      return;
+    }
+    setPresentationExitVisible(true);
+  }
   if (event.key !== "Escape") return;
   if (!elements.mobileActionSheet.hidden) {
     closeMobileActionSheet();
@@ -2321,6 +2353,13 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("click", closeMobileMenus);
 document.addEventListener("pointerdown", initializeAudio, { once: true });
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && document.body.classList.contains("presentation-mode")) {
+    setPresentationExitVisible(false);
+    document.body.classList.remove("presentation-mode");
+    elements.presentationExit.hidden = true;
+  }
+});
 
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (themePreference === "system") applyThemePreference("system");
