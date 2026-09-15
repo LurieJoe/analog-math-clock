@@ -38,7 +38,7 @@ The service worker and install behavior require the app to be served over HTTP r
 directly as a file.
 
 ```powershell
-cd C:\Users\jolurie\Desktop\Analog-math-clock
+Set-Location "$env:USERPROFILE\OneDrive\Documents\My Apps\Analog-math-clock"
 python -m http.server 8080
 ```
 
