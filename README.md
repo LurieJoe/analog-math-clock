@@ -29,8 +29,10 @@ Customization includes:
 - Optional date, weekday, UTC offset, and daylight-saving details
 - High contrast, reduced motion, and larger-control accessibility settings
 - Per-clock named alarms with built-in sounds, visual alerts, notifications, and five-minute snooze
+- Privacy-first system notifications that hide alarm and clock names by default
 - Optional per-clock hourly chimes with a sound preview
 - In-app Help Center, feedback reporting, and a privacy policy
+- Strict, size-limited backup and image validation before imported data is stored or rendered
 
 ## Run locally
 
@@ -52,6 +54,11 @@ Then open `http://localhost:8080`.
 The first clock uses the device's local system time. Additional clocks can use any time zone
 offered by the browser. The app works offline after its first successful load and stores clocks
 and appearance preferences locally on the device.
+
+Backups are validated before restore and are limited to 25 clocks, 200 alarms, 100 custom
+equations per clock position, 70 MB per backup file, 10 MB per picture, and 50 MB of saved
+pictures in total. SVG pictures are rejected. Replace restores require confirmation and storage
+changes are rolled back if the picture transaction fails.
 
 When an updated service worker is available, the running app displays **Update and Restart** and
 **Later** choices. Updating activates the downloaded version and reloads the PWA. Update

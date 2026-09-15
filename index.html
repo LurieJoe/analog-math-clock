@@ -3,20 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <script>
-      (() => {
-        const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
-        const saved = localStorage.getItem("equation-clock-theme") || "system";
-        const preference = param || saved;
-        const theme =
-          preference === "system"
-            ? window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light"
-            : preference;
-        document.documentElement.setAttribute("data-theme", theme);
-      })();
-    </script>
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; script-src-attr 'none'; connect-src 'self' data:; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'"
+    />
+    <script src="./theme.js"></script>
     <title>Analog Math Clock</title>
     <meta
       name="description"
@@ -72,6 +64,11 @@
             <span>Menu</span>
           </button>
         </header>
+
+        <section class="storage-warning" id="storage-warning" role="alert" hidden>
+          Browser storage is unavailable or full. Changes may not be saved. Export a backup before
+          clearing data or closing the app.
+        </section>
 
         <div class="clocks-grid" id="clocks-grid"></div>
       </section>
@@ -494,6 +491,10 @@
             Notification permission applies to the entire app. Individual alarms are managed
             from each clock's Customize panel.
           </p>
+          <label class="checkbox-label">
+            <input id="hide-notification-details" type="checkbox" />
+            Hide alarm names and clock names in system notifications
+          </label>
         </fieldset>
 
         <fieldset>
@@ -501,6 +502,10 @@
           <button id="export-backup-button" class="primary-button" type="button">
             Export backup
           </button>
+          <p class="tool-note">
+            A backup can contain all clock names, alarms, custom equations, preferences, and
+            uploaded pictures. Store and share it as a private file.
+          </p>
           <label>
             Restore behavior
             <select id="restore-mode">
@@ -584,7 +589,7 @@
                 suspend closed apps, so background notifications are best-effort.
               </p>
             </details>
-            <a class="button-link" href="./faq/" target="_blank" rel="noopener">
+            <a class="button-link" href="./faq/" target="_blank" rel="noopener noreferrer">
               Open the full FAQ
             </a>
           </div>
@@ -601,7 +606,7 @@
             class="button-link"
             href="https://flashcardflurry.com/"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
           >
             Open Flashcard Flurry
           </a>
@@ -610,13 +615,14 @@
         <fieldset>
           <legend>Feedback</legend>
           <p class="tool-note">
-            Found a bug or have an idea? Share feedback or report a problem on GitHub.
+            Found a bug or have an idea? GitHub feedback and problem reports are public. Remove
+            personal information and private pictures before posting.
           </p>
           <a
             class="button-link primary-link"
             href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
           >
             Send feedback
           </a>
@@ -630,7 +636,7 @@
               database. Your clocks and pictures stay in local browser storage unless you
               choose to export or share them.
             </p>
-            <a class="button-link" href="./privacy/" target="_blank" rel="noopener">
+            <a class="button-link" href="./privacy/" target="_blank" rel="noopener noreferrer">
               Read the full Privacy Policy
             </a>
           </div>
@@ -711,7 +717,7 @@
           <a
             href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
           >
             Feedback
           </a>

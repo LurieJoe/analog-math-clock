@@ -1,7 +1,8 @@
-const CACHE_NAME = "equation-clock-v36";
+const CACHE_NAME = "equation-clock-v37";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./theme.js",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
@@ -14,6 +15,7 @@ const APP_SHELL = [
   "./icons/icon-maskable-512.png",
   "./icons/apple-touch-icon.png"
 ];
+const CACHEABLE_PATHS = new Set(APP_SHELL.map((url) => new URL(url, self.location.href).pathname));
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -44,7 +46,13 @@ self.addEventListener("fetch", (event) => {
     (async () => {
       try {
         const response = await fetch(event.request, { cache: "no-store" });
-        if (response && response.status === 200) {
+        const requestUrl = new URL(event.request.url);
+        if (
+          response &&
+          response.status === 200 &&
+          CACHEABLE_PATHS.has(requestUrl.pathname) &&
+          !response.headers.get("Cache-Control")?.includes("no-store")
+        ) {
           const cache = await caches.open(CACHE_NAME);
           const copy = response.clone();
           await cache.put(event.request, copy);

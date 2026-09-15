@@ -3,20 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script>
-      (() => {
-        const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
-        const saved = localStorage.getItem("equation-clock-theme") || "system";
-        const preference = param || saved;
-        const theme =
-          preference === "system"
-            ? window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light"
-            : preference;
-        document.documentElement.setAttribute("data-theme", theme);
-      })();
-    </script>
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; script-src-attr 'none'; connect-src 'self' data:; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <script src="../theme.js"></script>
     <title>Help Center — Analog Math Clock</title>
     <meta
       name="description"
@@ -41,7 +33,7 @@
           <a
             href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
           >
             Feedback
           </a>
@@ -163,7 +155,8 @@
           <p>
             Pictures selected from your device remain in local browser storage. You can adjust
             their position, zoom, opacity, and readability overlay. They are included when you
-            export a full .mathclock backup.
+            export a full .mathclock backup. SVG pictures are not accepted, each picture is limited
+            to 10 MB, and all saved pictures together are limited to 50 MB.
           </p>
         </details>
         <details>
@@ -171,7 +164,9 @@
           <p>
             Open Tools and select Export backup. Save the .mathclock file locally or in a cloud
             file service, then use Restore backup on another device. Merge adds restored clocks
-            to existing ones; Replace recreates the backup.
+            to existing ones; Replace recreates the backup after you confirm the destructive
+            change. A backup can contain clock names, alarms, custom equations, settings, and
+            private pictures, so protect it like any other personal file.
           </p>
         </details>
         <details>
@@ -179,7 +174,9 @@
           <p>
             Alarms and hourly chimes are reliable while Analog Math Clock is open. Phones may suspend
             or stop a closed web app, so exact background alarm delivery cannot be guaranteed.
-            Browser notifications are best-effort and require permission.
+            Browser notifications are best-effort and require permission. Alarm and clock names
+            are hidden in system notifications by default because those notifications may appear
+            on a lock screen. You can change this in Tools.
           </p>
         </details>
         <details>
@@ -216,8 +213,10 @@
         <details>
           <summary>How do I share feedback or report a problem?</summary>
           <p>
-            Use the Feedback section in Tools or open the GitHub feedback form. Do not attach a
-            .mathclock backup or a private clock-face picture to a public issue.
+            Use the Feedback section in Tools or open the GitHub feedback form. GitHub issues,
+            comments, screenshots, and device details are public. Do not include personal
+            information or attach a .mathclock backup or private clock-face picture. Send private
+            privacy, security, or support questions to contact@analogmathclock.com.
           </p>
         </details>
       </section>
@@ -227,7 +226,7 @@
           class="button"
           href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
         >
           Send feedback
         </a>
@@ -242,7 +241,7 @@
           <a
             href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
           >
             Feedback
           </a>

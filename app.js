@@ -10,6 +10,14 @@ const PHOTO_STORE_NAME = "clock-photos";
 const LOCAL_TIME_ZONE = "local";
 const CENTER = 320;
 const EQUATION_RADIUS = 210;
+const MAX_CLOCKS = 25;
+const MAX_ALARMS = 200;
+const MAX_BACKUP_BYTES = 70 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BYTES = 50 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 8192;
+const MAX_CUSTOM_EQUATIONS_PER_HOUR = 100;
+const ALLOWED_IMAGE_TYPE = /^image\/(?!svg\+xml$)[a-z0-9.+-]+$/i;
 
 const commonTimeZones = [
   {
@@ -99,7 +107,8 @@ const appDefaults = {
   highContrast: false,
   reduceMotion: false,
   largeControls: false,
-  includeCustomEquations: false
+  includeCustomEquations: false,
+  hideNotificationDetails: true
 };
 
 const presets = {
@@ -267,6 +276,7 @@ const elements = {
   addCustomEquation: document.querySelector("#add-custom-equation"),
   customEquationList: document.querySelector("#custom-equation-list"),
   notificationPermission: document.querySelector("#notification-permission"),
+  hideNotificationDetails: document.querySelector("#hide-notification-details"),
   alarmTime: document.querySelector("#alarm-time"),
   alarmLabel: document.querySelector("#alarm-label"),
   alarmSound: document.querySelector("#alarm-sound"),
@@ -285,10 +295,10 @@ const elements = {
 
 let clocks = loadClocks();
 let activeClockId = null;
-let themePreference = localStorage.getItem(THEME_KEY) || "system";
-let appSettings = loadJson(APP_SETTINGS_KEY, appDefaults);
-let customEquations = loadJson(CUSTOM_EQUATIONS_KEY, {});
-let alarms = loadJson(ALARMS_KEY, []);
+let themePreference = readStorageItem(THEME_KEY) || "system";
+let appSettings = normalizeAppSettings(loadJson(APP_SETTINGS_KEY, appDefaults));
+let customEquations = normalizeCustomEquations(loadJson(CUSTOM_EQUATIONS_KEY, {}));
+let alarms = normalizeStoredAlarms(loadJson(ALARMS_KEY, []));
 let deferredInstallPrompt = null;
 let waitingServiceWorker = null;
 let serviceWorkerRegistration = null;
@@ -303,18 +313,211 @@ let snoozedAlarm = null;
 let alarmPreviousFocus = null;
 let lastScheduleCheckAt = Date.now();
 let presentationExitTimer = null;
+let settingsSnapshot = null;
 const lastChimeKeys = new Map();
 const clockViews = new Map();
 let timeZoneCatalog = [];
 
+function reportStorageError(error) {
+  console.error("Browser storage is unavailable:", error);
+  const warning = document.querySelector("#storage-warning");
+  if (warning) warning.hidden = false;
+}
+
+function readStorageItem(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    reportStorageError(error);
+    return null;
+  }
+}
+
+function writeStorageBatch(entries) {
+  const previous = new Map();
+  try {
+    entries.forEach(([key]) => previous.set(key, localStorage.getItem(key)));
+    entries.forEach(([key, value]) => localStorage.setItem(key, value));
+    return true;
+  } catch (error) {
+    try {
+      previous.forEach((value, key) => {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      });
+    } catch (rollbackError) {
+      console.error("Unable to roll back browser storage:", rollbackError);
+    }
+    reportStorageError(error);
+    return false;
+  }
+}
+
 function loadJson(key, fallback) {
   try {
-    const value = JSON.parse(localStorage.getItem(key));
+    const value = JSON.parse(readStorageItem(key));
     if (Array.isArray(fallback)) return Array.isArray(value) ? value : fallback;
     return value && typeof value === "object" ? { ...fallback, ...value } : fallback;
   } catch {
     return fallback;
   }
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeEnum(value, allowed, fallback, fieldName, strict) {
+  if (value === undefined) return fallback;
+  if (allowed.includes(value)) return value;
+  if (strict) throw new Error(`Invalid ${fieldName}`);
+  return fallback;
+}
+
+function normalizeBoolean(value, fallback, fieldName, strict) {
+  if (value === undefined) return fallback;
+  if (typeof value === "boolean") return value;
+  if (strict) throw new Error(`Invalid ${fieldName}`);
+  return fallback;
+}
+
+function normalizeNumber(value, minimum, maximum, fallback, fieldName, strict) {
+  if (value === undefined) return fallback;
+  if (strict && typeof value !== "number") throw new Error(`Invalid ${fieldName}`);
+  const number = Number(value);
+  if (Number.isFinite(number) && number >= minimum && number <= maximum) return number;
+  if (strict) throw new Error(`Invalid ${fieldName}`);
+  return fallback;
+}
+
+function normalizeColor(value, fallback, fieldName, strict) {
+  if (value === undefined) return fallback;
+  if (typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value)) return value;
+  if (strict) throw new Error(`Invalid ${fieldName}`);
+  return fallback;
+}
+
+function normalizeText(value, maximumLength, fallback, fieldName, strict) {
+  if (value === undefined) return fallback;
+  if (typeof value === "string") {
+    const text = value.trim().slice(0, maximumLength);
+    if (text) return text;
+  }
+  if (strict) throw new Error(`Invalid ${fieldName}`);
+  return fallback;
+}
+
+function normalizeTimeZone(value, strict = false) {
+  if (value === undefined || value === LOCAL_TIME_ZONE) return LOCAL_TIME_ZONE;
+  if (typeof value === "string") {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: value }).format();
+      return value;
+    } catch {
+      // Invalid IANA time zone.
+    }
+  }
+  if (strict) throw new Error("Invalid time zone");
+  return LOCAL_TIME_ZONE;
+}
+
+function normalizeAppSettings(settings, strict = false) {
+  const source = isRecord(settings) ? settings : {};
+  if (strict && !isRecord(settings)) throw new Error("Invalid app settings");
+  return Object.fromEntries(
+    Object.entries(appDefaults).map(([key, fallback]) => [
+      key,
+      normalizeBoolean(source[key], fallback, key, strict)
+    ])
+  );
+}
+
+function normalizeCustomEquations(value, strict = false) {
+  if (!isRecord(value)) {
+    if (strict) throw new Error("Invalid custom equations");
+    return {};
+  }
+  const normalized = {};
+  for (const [hour, items] of Object.entries(value)) {
+    if (!/^(?:[1-9]|1[0-2])$/.test(hour)) {
+      if (strict) throw new Error("Invalid custom equation hour");
+      continue;
+    }
+    if (!Array.isArray(items) || items.length > MAX_CUSTOM_EQUATIONS_PER_HOUR) {
+      if (strict) throw new Error("Invalid custom equation list");
+      continue;
+    }
+    normalized[hour] = items
+      .map((item) => {
+        if (!isRecord(item)) {
+          if (strict) throw new Error("Invalid custom equation");
+          return null;
+        }
+        const expression = normalizeText(item.expression, 30, "", "custom equation", strict);
+        if (!expression) return null;
+        const explanation =
+          item.explanation === undefined || item.explanation === ""
+            ? ""
+            : normalizeText(item.explanation, 140, "", "custom explanation", strict);
+        return { expression, explanation };
+      })
+      .filter(Boolean);
+    if (!normalized[hour].length) delete normalized[hour];
+  }
+  return normalized;
+}
+
+function normalizeStoredAlarms(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, MAX_ALARMS).flatMap((alarm) => {
+    try {
+      return [normalizeAlarm(alarm, false)];
+    } catch {
+      return [];
+    }
+  });
+}
+
+function normalizeAlarm(alarm, strict = true) {
+  if (!isRecord(alarm)) throw new Error("Invalid alarm");
+  if (typeof alarm.clockId !== "string" || !alarm.clockId) throw new Error("Invalid alarm clock");
+  if (typeof alarm.time !== "string" || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(alarm.time)) {
+    throw new Error("Invalid alarm time");
+  }
+  return {
+    id:
+      typeof alarm.id === "string" && alarm.id.length <= 100
+        ? alarm.id
+        : strict
+          ? (() => {
+              throw new Error("Invalid alarm ID");
+            })()
+          : createId(),
+    clockId: alarm.clockId,
+    time: alarm.time,
+    label:
+      typeof alarm.label === "string"
+        ? alarm.label.trim().slice(0, 50) || "Alarm"
+        : strict
+          ? (() => {
+              throw new Error("Invalid alarm label");
+            })()
+          : "Alarm",
+    sound: normalizeEnum(
+      alarm.sound,
+      ["chime", "bell", "cuckoo", "digital"],
+      "chime",
+      "alarm sound",
+      strict
+    ),
+    enabled: normalizeBoolean(alarm.enabled, true, "alarm enabled", strict),
+    lastTriggered:
+      alarm.lastTriggered === null || alarm.lastTriggered === undefined
+        ? null
+        : typeof alarm.lastTriggered === "string" && alarm.lastTriggered.length <= 40
+          ? alarm.lastTriggered
+          : null
+  };
 }
 
 function openPhotoDatabase() {
@@ -335,9 +538,22 @@ async function usePhotoStore(mode, operation) {
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(PHOTO_STORE_NAME, mode);
     const request = operation(transaction.objectStore(PHOTO_STORE_NAME));
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-    transaction.oncomplete = () => database.close();
+    let result;
+    request.onsuccess = () => {
+      result = request.result;
+    };
+    transaction.oncomplete = () => {
+      database.close();
+      resolve(result);
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error || request.error);
+    };
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error || new Error("Photo storage transaction was aborted"));
+    };
   });
 }
 
@@ -355,6 +571,35 @@ function deleteClockPhoto(clockId) {
 
 function clearClockPhotos() {
   return usePhotoStore("readwrite", (store) => store.clear());
+}
+
+async function getStoredPhotoBytes(excludedClockId = null) {
+  const database = await openPhotoDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(PHOTO_STORE_NAME, "readonly");
+    const request = transaction.objectStore(PHOTO_STORE_NAME).openCursor();
+    let total = 0;
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      if (cursor.key !== excludedClockId && cursor.value instanceof Blob) {
+        total += cursor.value.size;
+      }
+      cursor.continue();
+    };
+    transaction.oncomplete = () => {
+      database.close();
+      resolve(total);
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error || request.error);
+    };
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error || new Error("Photo size check was aborted"));
+    };
+  });
 }
 
 async function replaceClockPhotos(entries) {
@@ -379,6 +624,28 @@ async function replaceClockPhotos(entries) {
   });
 }
 
+async function mergeClockPhotos(entries) {
+  if (!entries.length) return;
+  const database = await openPhotoDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(PHOTO_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(PHOTO_STORE_NAME);
+    entries.forEach(({ clockId, blob }) => store.put(blob, clockId));
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error);
+    };
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error || new Error("Photo import was aborted"));
+    };
+  });
+}
+
 function readBlobAsDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -386,6 +653,70 @@ function readBlobAsDataUrl(blob) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
+}
+
+async function validateImageBlob(blob) {
+  if (
+    !(blob instanceof Blob) ||
+    !ALLOWED_IMAGE_TYPE.test(blob.type) ||
+    blob.size <= 0 ||
+    blob.size > MAX_IMAGE_BYTES
+  ) {
+    throw new Error("Unsupported image type or size");
+  }
+
+  if ("createImageBitmap" in globalThis) {
+    const bitmap = await createImageBitmap(blob);
+    try {
+      if (
+        bitmap.width <= 0 ||
+        bitmap.height <= 0 ||
+        bitmap.width > MAX_IMAGE_DIMENSION ||
+        bitmap.height > MAX_IMAGE_DIMENSION
+      ) {
+        throw new Error("Unsupported image dimensions");
+      }
+    } finally {
+      bitmap.close();
+    }
+    return;
+  }
+
+  const url = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error("The image could not be decoded"));
+      image.src = url;
+    });
+    if (
+      image.naturalWidth <= 0 ||
+      image.naturalHeight <= 0 ||
+      image.naturalWidth > MAX_IMAGE_DIMENSION ||
+      image.naturalHeight > MAX_IMAGE_DIMENSION
+    ) {
+      throw new Error("Unsupported image dimensions");
+    }
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function dataUrlToImageBlob(dataUrl) {
+  if (
+    typeof dataUrl !== "string" ||
+    !/^data:image\/(?!svg\+xml)[a-z0-9.+-]+;base64,/i.test(dataUrl)
+  ) {
+    throw new Error("Invalid backup image");
+  }
+  const encoded = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  const estimatedBytes = Math.floor((encoded.length * 3) / 4);
+  if (estimatedBytes > MAX_IMAGE_BYTES) throw new Error("Backup image is too large");
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  await validateImageBlob(blob);
+  return blob;
 }
 
 function createId() {
@@ -402,14 +733,178 @@ function createClock(name, timeZone = LOCAL_TIME_ZONE, settings = {}) {
   };
 }
 
-function normalizeSettings(settings = {}) {
-  const normalized = { ...defaults, ...settings };
-  if (!["equations", "binary", "maya"].includes(normalized.numeralStyle)) {
-    normalized.numeralStyle = defaults.numeralStyle;
-  }
-  if (!equationPools[normalized.difficulty]) {
-    normalized.difficulty = defaults.difficulty;
-  }
+function normalizeSettings(settings = {}, strict = false) {
+  const source = isRecord(settings) ? settings : {};
+  if (strict && !isRecord(settings)) throw new Error("Invalid clock settings");
+  const normalized = {
+    bodyStyle: normalizeEnum(
+      source.bodyStyle,
+      ["wall", "grandfather", "cuckoo", "alarm"],
+      defaults.bodyStyle,
+      "clock body",
+      strict
+    ),
+    faceShape: normalizeEnum(
+      source.faceShape,
+      ["round", "square", "octagon", "arch"],
+      defaults.faceShape,
+      "face shape",
+      strict
+    ),
+    faceColor: normalizeColor(source.faceColor, defaults.faceColor, "face color", strict),
+    rimColor: normalizeColor(source.rimColor, defaults.rimColor, "rim color", strict),
+    equationColor: normalizeColor(
+      source.equationColor,
+      defaults.equationColor,
+      "equation color",
+      strict
+    ),
+    equationSize: normalizeNumber(
+      source.equationSize,
+      22,
+      40,
+      defaults.equationSize,
+      "equation size",
+      strict
+    ),
+    showTicks: normalizeBoolean(source.showTicks, defaults.showTicks, "minute marks", strict),
+    handStyle: normalizeEnum(
+      source.handStyle,
+      ["round", "square", "tapered"],
+      defaults.handStyle,
+      "hand style",
+      strict
+    ),
+    hourColor: normalizeColor(source.hourColor, defaults.hourColor, "hour color", strict),
+    minuteColor: normalizeColor(
+      source.minuteColor,
+      defaults.minuteColor,
+      "minute color",
+      strict
+    ),
+    secondColor: normalizeColor(
+      source.secondColor,
+      defaults.secondColor,
+      "second color",
+      strict
+    ),
+    handWidth: normalizeNumber(
+      source.handWidth,
+      6,
+      18,
+      defaults.handWidth,
+      "hand thickness",
+      strict
+    ),
+    smoothSeconds: normalizeBoolean(
+      source.smoothSeconds,
+      defaults.smoothSeconds,
+      "smooth seconds",
+      strict
+    ),
+    pendulumColor: normalizeColor(
+      source.pendulumColor,
+      defaults.pendulumColor,
+      "pendulum color",
+      strict
+    ),
+    pendulumLength: normalizeNumber(
+      source.pendulumLength,
+      60,
+      140,
+      defaults.pendulumLength,
+      "pendulum length",
+      strict
+    ),
+    pendulumBob: normalizeEnum(
+      source.pendulumBob,
+      ["round", "oval", "diamond"],
+      defaults.pendulumBob,
+      "pendulum bob",
+      strict
+    ),
+    numeralStyle: normalizeEnum(
+      source.numeralStyle,
+      ["equations", "binary", "maya"],
+      defaults.numeralStyle,
+      "number style",
+      strict
+    ),
+    difficulty: normalizeEnum(
+      source.difficulty,
+      ["simple", "mixed", "advanced"],
+      defaults.difficulty,
+      "equation difficulty",
+      strict
+    ),
+    photoPositionX: normalizeNumber(
+      source.photoPositionX,
+      -50,
+      50,
+      defaults.photoPositionX,
+      "photo horizontal position",
+      strict
+    ),
+    photoPositionY: normalizeNumber(
+      source.photoPositionY,
+      -50,
+      50,
+      defaults.photoPositionY,
+      "photo vertical position",
+      strict
+    ),
+    photoZoom: normalizeNumber(
+      source.photoZoom,
+      100,
+      250,
+      defaults.photoZoom,
+      "photo zoom",
+      strict
+    ),
+    photoOpacity: normalizeNumber(
+      source.photoOpacity,
+      20,
+      100,
+      defaults.photoOpacity,
+      "photo opacity",
+      strict
+    ),
+    photoOverlay: normalizeNumber(
+      source.photoOverlay,
+      0,
+      90,
+      defaults.photoOverlay,
+      "photo overlay",
+      strict
+    ),
+    showDate: normalizeBoolean(source.showDate, defaults.showDate, "date display", strict),
+    showUtcOffset: normalizeBoolean(
+      source.showUtcOffset,
+      defaults.showUtcOffset,
+      "UTC offset display",
+      strict
+    ),
+    showDst: normalizeBoolean(source.showDst, defaults.showDst, "DST display", strict),
+    soundEnabled: normalizeBoolean(
+      source.soundEnabled,
+      defaults.soundEnabled,
+      "clock sounds",
+      strict
+    ),
+    hourlyChime: normalizeBoolean(
+      source.hourlyChime,
+      defaults.hourlyChime,
+      "hourly chime",
+      strict
+    ),
+    chimeSound: normalizeEnum(
+      source.chimeSound,
+      ["chime", "bell", "cuckoo", "digital"],
+      defaults.chimeSound,
+      "chime sound",
+      strict
+    )
+  };
   if (
     typeof normalized.secondColor === "string" &&
     normalized.secondColor.toLowerCase() === "#b11f4b"
@@ -427,22 +922,28 @@ function normalizeSettings(settings = {}) {
 
 function loadClocks() {
   try {
-    const saved = JSON.parse(localStorage.getItem(CLOCKS_KEY));
+    const saved = JSON.parse(readStorageItem(CLOCKS_KEY));
     if (Array.isArray(saved) && saved.length) {
-      return saved.map((clock, index) => ({
-        id: clock.id || createId(),
-        name: clock.name || `Clock ${index + 1}`,
-        timeZone: clock.timeZone || LOCAL_TIME_ZONE,
-        settings: normalizeSettings(clock.settings),
-        equations: []
-      }));
+      return saved.slice(0, MAX_CLOCKS).map((clock, index) => {
+        const source = isRecord(clock) ? clock : {};
+        return {
+          id:
+            typeof source.id === "string" && /^[a-z0-9._-]{1,100}$/i.test(source.id)
+              ? source.id
+              : createId(),
+          name: normalizeText(source.name, 40, `Clock ${index + 1}`, "clock name", false),
+          timeZone: normalizeTimeZone(source.timeZone),
+          settings: normalizeSettings(source.settings),
+          equations: []
+        };
+      });
     }
   } catch {
     // Fall through to legacy migration.
   }
 
   try {
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_SETTINGS_KEY));
+    const legacy = JSON.parse(readStorageItem(LEGACY_SETTINGS_KEY));
     return [createClock("Local time", LOCAL_TIME_ZONE, legacy || {})];
   } catch {
     return [createClock("Local time")];
@@ -451,7 +952,7 @@ function loadClocks() {
 
 function saveClocks() {
   const serializable = clocks.map(({ equations, ...clock }) => clock);
-  localStorage.setItem(CLOCKS_KEY, JSON.stringify(serializable));
+  return writeStorageBatch([[CLOCKS_KEY, JSON.stringify(serializable)]]);
 }
 
 function randomIndex(length) {
@@ -492,42 +993,66 @@ function createSvgElement(tag, attributes = {}) {
   return element;
 }
 
-function getFaceShapeMarkup(shape, clipId) {
+function getFaceShapeDefinition(shape) {
   const shapes = {
     round: {
-      rim: '<circle class="clock-rim" cx="320" cy="320" r="294"></circle>',
-      face: '<circle class="clock-face" cx="320" cy="320" r="279"></circle>',
-      clip: '<circle cx="320" cy="320" r="278"></circle>',
-      overlay: '<circle class="photo-overlay" cx="320" cy="320" r="278"></circle>'
+      tag: "circle",
+      rim: { cx: 320, cy: 320, r: 294 },
+      face: { cx: 320, cy: 320, r: 279 },
+      clip: { cx: 320, cy: 320, r: 278 },
+      overlay: { cx: 320, cy: 320, r: 278 }
     },
     square: {
-      rim: '<rect class="clock-rim" x="26" y="26" width="588" height="588" rx="76"></rect>',
-      face: '<rect class="clock-face" x="44" y="44" width="552" height="552" rx="60"></rect>',
-      clip: '<rect x="45" y="45" width="550" height="550" rx="59"></rect>',
-      overlay: '<rect class="photo-overlay" x="45" y="45" width="550" height="550" rx="59"></rect>'
+      tag: "rect",
+      rim: { x: 26, y: 26, width: 588, height: 588, rx: 76 },
+      face: { x: 44, y: 44, width: 552, height: 552, rx: 60 },
+      clip: { x: 45, y: 45, width: 550, height: 550, rx: 59 },
+      overlay: { x: 45, y: 45, width: 550, height: 550, rx: 59 }
     },
     octagon: {
-      rim: '<polygon class="clock-rim" points="142,26 498,26 614,142 614,498 498,614 142,614 26,498 26,142"></polygon>',
-      face: '<polygon class="clock-face" points="154,45 486,45 595,154 595,486 486,595 154,595 45,486 45,154"></polygon>',
-      clip: '<polygon points="155,46 485,46 594,155 594,485 485,594 155,594 46,485 46,155"></polygon>',
-      overlay: '<polygon class="photo-overlay" points="155,46 485,46 594,155 594,485 485,594 155,594 46,485 46,155"></polygon>'
+      tag: "polygon",
+      rim: { points: "142,26 498,26 614,142 614,498 498,614 142,614 26,498 26,142" },
+      face: { points: "154,45 486,45 595,154 595,486 486,595 154,595 45,486 45,154" },
+      clip: { points: "155,46 485,46 594,155 594,485 485,594 155,594 46,485 46,155" },
+      overlay: {
+        points: "155,46 485,46 594,155 594,485 485,594 155,594 46,485 46,155"
+      }
     },
     arch: {
-      rim: '<path class="clock-rim" d="M38 614V260C38 104 164 26 320 26S602 104 602 260V614Z"></path>',
-      face: '<path class="clock-face" d="M57 595V261C57 119 173 45 320 45S583 119 583 261V595Z"></path>',
-      clip: '<path d="M58 594V261C58 120 174 46 320 46S582 120 582 261V594Z"></path>',
-      overlay: '<path class="photo-overlay" d="M58 594V261C58 120 174 46 320 46S582 120 582 261V594Z"></path>'
+      tag: "path",
+      rim: { d: "M38 614V260C38 104 164 26 320 26S602 104 602 260V614Z" },
+      face: { d: "M57 595V261C57 119 173 45 320 45S583 119 583 261V595Z" },
+      clip: { d: "M58 594V261C58 120 174 46 320 46S582 120 582 261V594Z" },
+      overlay: { d: "M58 594V261C58 120 174 46 320 46S582 120 582 261V594Z" }
     }
   };
-  const selected = shapes[shape] || shapes.round;
-  return `
-    <defs><clipPath id="${clipId}">${selected.clip}</clipPath></defs>
-    ${selected.rim}
-    ${selected.face}
-    <image class="face-photo" x="41" y="41" width="558" height="558"
-      preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})" hidden></image>
-    ${selected.overlay}
-  `;
+  return shapes[shape] || shapes.round;
+}
+
+function appendFaceShape(svg, shape, clipId) {
+  const selected = getFaceShapeDefinition(shape);
+  const definitions = createSvgElement("defs");
+  const clipPath = createSvgElement("clipPath", { id: clipId });
+  clipPath.append(createSvgElement(selected.tag, selected.clip));
+  definitions.append(clipPath);
+
+  const rim = createSvgElement(selected.tag, { class: "clock-rim", ...selected.rim });
+  const face = createSvgElement(selected.tag, { class: "clock-face", ...selected.face });
+  const photo = createSvgElement("image", {
+    class: "face-photo",
+    x: 41,
+    y: 41,
+    width: 558,
+    height: 558,
+    preserveAspectRatio: "xMidYMid slice",
+    "clip-path": `url(#${clipId})`,
+    hidden: ""
+  });
+  const overlay = createSvgElement(selected.tag, {
+    class: "photo-overlay",
+    ...selected.overlay
+  });
+  svg.append(definitions, rim, face, photo, overlay);
 }
 
 function createClockSvg(clock) {
@@ -539,18 +1064,49 @@ function createClockSvg(clock) {
     "aria-label": `${clock.name} equation clock`
   });
 
-  svg.innerHTML = `
-    ${getFaceShapeMarkup(clock.settings.faceShape, clipId)}
-    <g class="tick-marks" aria-hidden="true"></g>
-    <g class="equations" aria-hidden="true"></g>
-    <g class="hands ${clock.settings.handStyle}" aria-hidden="true">
-      <line class="hand hour-hand" x1="320" y1="337" x2="320" y2="192"></line>
-      <line class="hand minute-hand" x1="320" y1="342" x2="320" y2="132"></line>
-      <line class="hand second-hand" x1="320" y1="358" x2="320" y2="105"></line>
-      <circle class="center-pin-outer" cx="320" cy="320" r="15"></circle>
-      <circle class="center-pin" cx="320" cy="320" r="7"></circle>
-    </g>
-  `;
+  appendFaceShape(svg, clock.settings.faceShape, clipId);
+  const ticks = createSvgElement("g", { class: "tick-marks", "aria-hidden": "true" });
+  const equations = createSvgElement("g", { class: "equations", "aria-hidden": "true" });
+  const hands = createSvgElement("g", {
+    class: `hands ${clock.settings.handStyle}`,
+    "aria-hidden": "true"
+  });
+  hands.append(
+    createSvgElement("line", {
+      class: "hand hour-hand",
+      x1: 320,
+      y1: 337,
+      x2: 320,
+      y2: 192
+    }),
+    createSvgElement("line", {
+      class: "hand minute-hand",
+      x1: 320,
+      y1: 342,
+      x2: 320,
+      y2: 132
+    }),
+    createSvgElement("line", {
+      class: "hand second-hand",
+      x1: 320,
+      y1: 358,
+      x2: 320,
+      y2: 105
+    }),
+    createSvgElement("circle", {
+      class: "center-pin-outer",
+      cx: 320,
+      cy: 320,
+      r: 15
+    }),
+    createSvgElement("circle", {
+      class: "center-pin",
+      cx: 320,
+      cy: 320,
+      r: 7
+    })
+  );
+  svg.append(ticks, equations, hands);
 
   return svg;
 }
@@ -1003,16 +1559,22 @@ function applyClockSettings(view, clock) {
 }
 
 function applyThemePreference(preference, persist = false) {
-  themePreference = preference;
+  themePreference = normalizeEnum(
+    preference,
+    ["system", "light", "dark"],
+    "system",
+    "theme",
+    false
+  );
   const resolved =
-    preference === "system"
+    themePreference === "system"
       ? window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light"
-      : preference;
+      : themePreference;
   document.documentElement.setAttribute("data-theme", resolved);
-  elements.themePreference.value = preference;
-  if (persist) localStorage.setItem(THEME_KEY, preference);
+  elements.themePreference.value = themePreference;
+  if (persist) writeStorageBatch([[THEME_KEY, themePreference]]);
 }
 
 function createActionButton(label, className, action) {
@@ -1535,18 +2097,39 @@ function openSettings(clockId) {
   const clock = clocks.find((item) => item.id === clockId);
   if (!clock) return;
   activeClockId = clockId;
+  settingsSnapshot = {
+    name: clock.name,
+    timeZone: clock.timeZone,
+    settings: { ...clock.settings },
+    equations: [...clock.equations]
+  };
   populateForm(clock);
   renderAlarmList();
   elements.settingsPanel.hidden = false;
   elements.closeSettings.focus();
 }
 
-function closeSettings() {
+function closeSettings(revert = true) {
+  if (revert && settingsSnapshot && activeClockId) {
+    const clock = clocks.find((item) => item.id === activeClockId);
+    if (clock) {
+      clock.name = settingsSnapshot.name;
+      clock.timeZone = settingsSnapshot.timeZone;
+      clock.settings = { ...settingsSnapshot.settings };
+      clock.equations = [...settingsSnapshot.equations];
+      renderAllClocks();
+    }
+  }
   elements.settingsPanel.hidden = true;
   activeClockId = null;
+  settingsSnapshot = null;
 }
 
 function addClock() {
+  if (clocks.length >= MAX_CLOCKS) {
+    window.alert(`Analog Math Clock supports up to ${MAX_CLOCKS} clocks.`);
+    return;
+  }
   const clock = createClock(`Clock ${clocks.length + 1}`);
   clocks.push(clock);
   saveClocks();
@@ -1644,73 +2227,164 @@ async function restoreBackup() {
   }
   elements.backupStatus.textContent = "Reading backup…";
   try {
+    if (file.size <= 0 || file.size > MAX_BACKUP_BYTES) {
+      throw new Error("The backup file is too large");
+    }
     const backup = JSON.parse(await file.text());
     if (
       backup?.format !== "math-clock-backup" ||
       backup.schemaVersion !== 1 ||
       !Array.isArray(backup.clocks) ||
-      backup.clocks.length === 0
+      backup.clocks.length === 0 ||
+      backup.clocks.length > MAX_CLOCKS
     ) {
       throw new Error("Unsupported backup format");
     }
+    if (backup.photos !== undefined && !isRecord(backup.photos)) {
+      throw new Error("Invalid backup pictures");
+    }
 
     const replace = elements.restoreMode.value === "replace";
+    if (
+      replace &&
+      !window.confirm(
+        "Replace all current clocks, alarms, equations, settings, and pictures with this backup?"
+      )
+    ) {
+      elements.backupStatus.textContent = "Restore canceled.";
+      return;
+    }
     const existingNames = new Set(replace ? [] : clocks.map((clock) => clock.name));
     const idMap = new Map();
     const restoredClocks = [];
     const photoEntries = [];
+    let importedPhotoBytes = 0;
     for (const savedClock of backup.clocks) {
+      if (
+        !isRecord(savedClock) ||
+        typeof savedClock.id !== "string" ||
+        savedClock.id.length === 0 ||
+        savedClock.id.length > 100 ||
+        idMap.has(savedClock.id)
+      ) {
+        throw new Error("Invalid or duplicate clock ID");
+      }
       const id = createId();
       idMap.set(savedClock.id, id);
-      const name = uniqueClockName(savedClock.name || "Clock", existingNames);
+      const name = uniqueClockName(
+        normalizeText(savedClock.name, 40, "Clock", "clock name", true),
+        existingNames
+      );
       existingNames.add(name);
       restoredClocks.push({
         id,
         name,
-        timeZone: savedClock.timeZone || LOCAL_TIME_ZONE,
-        settings: normalizeSettings(savedClock.settings),
+        timeZone: normalizeTimeZone(savedClock.timeZone, true),
+        settings: normalizeSettings(savedClock.settings, true),
         equations: []
       });
       const dataUrl = backup.photos?.[savedClock.id];
-      if (typeof dataUrl === "string" && dataUrl.startsWith("data:image/")) {
-        photoEntries.push({ clockId: id, blob: await (await fetch(dataUrl)).blob() });
+      if (dataUrl !== undefined) {
+        const blob = await dataUrlToImageBlob(dataUrl);
+        importedPhotoBytes += blob.size;
+        if (importedPhotoBytes > MAX_TOTAL_IMAGE_BYTES) {
+          throw new Error("Backup pictures exceed the total size limit");
+        }
+        photoEntries.push({ clockId: id, blob });
       }
     }
 
-    const restoredCustomEquations = replace ? {} : { ...customEquations };
-    if (backup.customEquations && typeof backup.customEquations === "object") {
-      for (const [hour, items] of Object.entries(backup.customEquations)) {
-        if (!Array.isArray(items)) continue;
-        restoredCustomEquations[hour] = [
-          ...(restoredCustomEquations[hour] || []),
-          ...items
-        ].slice(0, 100);
+    const importedCustomEquations = normalizeCustomEquations(
+      backup.customEquations === undefined ? {} : backup.customEquations,
+      true
+    );
+    const restoredCustomEquations = replace
+      ? importedCustomEquations
+      : normalizeCustomEquations({
+          ...customEquations,
+          ...Object.fromEntries(
+            Object.entries(importedCustomEquations).map(([hour, items]) => [
+              hour,
+              [...(customEquations[hour] || []), ...items].slice(
+                0,
+                MAX_CUSTOM_EQUATIONS_PER_HOUR
+              )
+            ])
+          )
+        });
+    const importedAlarms =
+      backup.alarms === undefined
+        ? []
+        : (() => {
+            if (!Array.isArray(backup.alarms) || backup.alarms.length > MAX_ALARMS) {
+              throw new Error("Invalid alarm list");
+            }
+            return backup.alarms.map((alarm) => normalizeAlarm(alarm, true));
+          })();
+    const restoredAlarms = importedAlarms.map((alarm) => {
+      if (!idMap.has(alarm.clockId)) throw new Error("Alarm references an unknown clock");
+      return {
+        ...alarm,
+        id: createId(),
+        clockId: idMap.get(alarm.clockId)
+      };
+    });
+    const nextClocks = replace ? restoredClocks : [...clocks, ...restoredClocks];
+    if (nextClocks.length > MAX_CLOCKS) throw new Error("Too many clocks");
+    const nextAlarms = replace ? restoredAlarms : [...alarms, ...restoredAlarms];
+    if (nextAlarms.length > MAX_ALARMS) throw new Error("Too many alarms");
+    if (!replace) {
+      const existingPhotoBytes = await getStoredPhotoBytes();
+      if (existingPhotoBytes + importedPhotoBytes > MAX_TOTAL_IMAGE_BYTES) {
+        throw new Error("Restored pictures exceed the total size limit");
       }
     }
-    const restoredAlarms = Array.isArray(backup.alarms)
-      ? backup.alarms
-          .filter((alarm) => idMap.has(alarm.clockId))
-          .map((alarm) => ({ ...alarm, id: createId(), clockId: idMap.get(alarm.clockId) }))
-      : [];
+    const nextAppSettings =
+      backup.appSettings === undefined
+        ? appSettings
+        : normalizeAppSettings(backup.appSettings, true);
+    const nextTheme =
+      backup.themePreference === undefined
+        ? themePreference
+        : normalizeEnum(
+            backup.themePreference,
+            ["system", "light", "dark"],
+            "system",
+            "theme",
+            true
+          );
 
-    if (replace) {
-      await replaceClockPhotos(photoEntries);
-      clocks = restoredClocks;
-      alarms = restoredAlarms;
-    } else {
-      for (const entry of photoEntries) await saveClockPhoto(entry.clockId, entry.blob);
-      clocks.push(...restoredClocks);
-      alarms.push(...restoredAlarms);
+    const previousStorage = createStateStorageEntries({
+      clocks,
+      appSettings,
+      customEquations,
+      alarms,
+      themePreference
+    });
+    const nextStorage = createStateStorageEntries({
+      clocks: nextClocks,
+      appSettings: nextAppSettings,
+      customEquations: restoredCustomEquations,
+      alarms: nextAlarms,
+      themePreference: nextTheme
+    });
+    if (!writeStorageBatch(nextStorage)) throw new Error("Unable to save restored data");
+    try {
+      if (replace) {
+        await replaceClockPhotos(photoEntries);
+      } else {
+        await mergeClockPhotos(photoEntries);
+      }
+    } catch (error) {
+      writeStorageBatch(previousStorage);
+      throw error;
     }
+
+    clocks = nextClocks;
+    alarms = nextAlarms;
     customEquations = restoredCustomEquations;
-    if (backup.appSettings && typeof backup.appSettings === "object") {
-      appSettings = { ...appDefaults, ...appSettings, ...backup.appSettings };
-    }
-    if (["system", "light", "dark"].includes(backup.themePreference)) {
-      applyThemePreference(backup.themePreference, true);
-    }
-    saveClocks();
-    saveFeatureData();
+    appSettings = nextAppSettings;
+    applyThemePreference(nextTheme);
     applyAppSettings();
     renderAllClocks();
     renderToolLists();
@@ -1869,10 +2543,23 @@ async function exportClock(clock, format) {
   }
 }
 
+function createStateStorageEntries(state) {
+  const serializableClocks = state.clocks.map(({ equations, ...clock }) => clock);
+  return [
+    [CLOCKS_KEY, JSON.stringify(serializableClocks)],
+    [APP_SETTINGS_KEY, JSON.stringify(state.appSettings)],
+    [CUSTOM_EQUATIONS_KEY, JSON.stringify(state.customEquations)],
+    [ALARMS_KEY, JSON.stringify(state.alarms)],
+    [THEME_KEY, state.themePreference]
+  ];
+}
+
 function saveFeatureData() {
-  localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(appSettings));
-  localStorage.setItem(CUSTOM_EQUATIONS_KEY, JSON.stringify(customEquations));
-  localStorage.setItem(ALARMS_KEY, JSON.stringify(alarms));
+  return writeStorageBatch([
+    [APP_SETTINGS_KEY, JSON.stringify(appSettings)],
+    [CUSTOM_EQUATIONS_KEY, JSON.stringify(customEquations)],
+    [ALARMS_KEY, JSON.stringify(alarms)]
+  ]);
 }
 
 function applyAppSettings() {
@@ -1885,6 +2572,7 @@ function applyAppSettings() {
   elements.reduceMotion.checked = appSettings.reduceMotion;
   elements.largeControls.checked = appSettings.largeControls;
   elements.includeCustomEquations.checked = appSettings.includeCustomEquations;
+  elements.hideNotificationDetails.checked = appSettings.hideNotificationDetails;
   if (!("wakeLock" in navigator)) {
     elements.keepAwake.disabled = true;
     elements.keepAwake.parentElement.title = "Screen wake lock is not supported by this browser.";
@@ -2038,10 +2726,17 @@ function triggerAlarm(alarm, clock, date) {
     Notification.permission === "granted"
   ) {
     try {
-      new Notification(alarm.label || "Analog Math Clock alarm", {
-        body: `${alarm.time} · ${clock.name}`,
-        icon: "./icons/icon-192.png"
-      });
+      new Notification(
+        appSettings.hideNotificationDetails
+          ? "Analog Math Clock alarm"
+          : alarm.label || "Analog Math Clock alarm",
+        {
+          body: appSettings.hideNotificationDetails
+            ? "An alarm is ringing."
+            : `${alarm.time} · ${clock.name}`,
+          icon: "./icons/icon-192.png"
+        }
+      );
     } catch (error) {
       console.error("Unable to show the alarm notification:", error);
     }
@@ -2187,6 +2882,10 @@ elements.includeCustomEquations.addEventListener("change", () => {
   appSettings.includeCustomEquations = elements.includeCustomEquations.checked;
   saveFeatureData();
 });
+elements.hideNotificationDetails.addEventListener("change", () => {
+  appSettings.hideNotificationDetails = elements.hideNotificationDetails.checked;
+  saveFeatureData();
+});
 elements.highContrast.addEventListener("change", () => {
   appSettings.highContrast = elements.highContrast.checked;
   saveFeatureData();
@@ -2215,6 +2914,12 @@ elements.addCustomEquation.addEventListener("click", () => {
   const explanation = elements.customEquationExplanation.value.trim();
   if (!expression) return;
   customEquations[hour] = customEquations[hour] || [];
+  if (customEquations[hour].length >= MAX_CUSTOM_EQUATIONS_PER_HOUR) {
+    window.alert(
+      `Each clock position supports up to ${MAX_CUSTOM_EQUATIONS_PER_HOUR} custom equations.`
+    );
+    return;
+  }
   customEquations[hour].push({ expression, explanation });
   elements.customEquationText.value = "";
   elements.customEquationExplanation.value = "";
@@ -2270,8 +2975,8 @@ elements.closeSettings.addEventListener("click", closeSettings);
 elements.facePicture.addEventListener("change", async () => {
   const file = elements.facePicture.files?.[0];
   if (!file) return;
-  if (!file.type.startsWith("image/")) {
-    window.alert("Choose an image file for the clock face.");
+  if (!ALLOWED_IMAGE_TYPE.test(file.type) || file.size > MAX_IMAGE_BYTES) {
+    window.alert("Choose a non-SVG image no larger than 10 MB.");
     elements.facePicture.value = "";
     return;
   }
@@ -2279,6 +2984,11 @@ elements.facePicture.addEventListener("change", async () => {
   const clock = clocks.find((item) => item.id === activeClockId);
   if (!clock) return;
   try {
+    await validateImageBlob(file);
+    const existingBytes = await getStoredPhotoBytes(clock.id);
+    if (existingBytes + file.size > MAX_TOTAL_IMAGE_BYTES) {
+      throw new Error("Saved clock pictures exceed the total size limit");
+    }
     await saveClockPhoto(clock.id, file);
     const view = clockViews.get(clock.id);
     if (view) await loadClockPhoto(view, clock);
@@ -2318,8 +3028,7 @@ elements.settingsForm.addEventListener("submit", (event) => {
   clock.name = next.name;
   clock.timeZone = next.timeZone;
   clock.settings = next.settings;
-  saveClocks();
-  closeSettings();
+  if (saveClocks()) closeSettings(false);
 });
 elements.resetButton.addEventListener("click", () => {
   const clock = clocks.find((item) => item.id === activeClockId);

@@ -3,20 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script>
-      (() => {
-        const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
-        const saved = localStorage.getItem("equation-clock-theme") || "system";
-        const preference = param || saved;
-        const theme =
-          preference === "system"
-            ? window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light"
-            : preference;
-        document.documentElement.setAttribute("data-theme", theme);
-      })();
-    </script>
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; script-src-attr 'none'; connect-src 'self' data:; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <script src="../theme.js"></script>
     <title>Privacy Policy — Analog Math Clock</title>
     <meta
       name="description"
@@ -41,7 +33,7 @@
           <a
             href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
           >
             Feedback
           </a>
@@ -49,7 +41,7 @@
       </div>
     </header>
     <main id="main" class="page-shell">
-      <p class="eyebrow">Last updated September 8, 2026</p>
+      <p class="eyebrow">Last updated September 15, 2026</p>
       <h1 class="page-title">Privacy Policy</h1>
       <p class="lead">
         Analog Math Clock is designed so that your clocks, equations, alarms, and pictures stay under
@@ -59,8 +51,8 @@
         <div class="callout">
           <p>
             <strong>The short version:</strong> Analog Math Clock has no accounts, advertising,
-            behavioral analytics, or application database. Your clocks and pictures stay in
-            local browser storage unless you choose to export or share them.
+            behavioral analytics, or developer-operated server database. Your clocks and pictures
+            stay in local browser storage unless you choose to export or share them.
           </p>
         </div>
         <h2>Information stored by the app</h2>
@@ -90,7 +82,9 @@
           Alarm schedules are stored locally. If you request notification permission, your
           browser or operating system manages that permission and delivery. Analog Math Clock does not
           operate a remote notification service, and background notification delivery cannot be
-          guaranteed.
+          guaranteed. System notifications may be visible on a lock screen or to another person
+          using your device. The app hides alarm and clock names by default; you can change this
+          setting in Tools.
         </p>
         <h2>Exports, sharing, and backups</h2>
         <p>
@@ -109,9 +103,17 @@
         </p>
         <h2>External links and feedback</h2>
         <p>
-          Help and feedback links may open GitHub. Information you submit there is governed by
-          GitHub's policies and is shared only when you choose to submit it. Do not attach a
-          .mathclock backup or private clock-face picture to a public issue.
+          Links may open GitHub or Flashcard Flurry. Those sites receive standard web request
+          information under their own policies. GitHub issues, comments, screenshots, device
+          details, and browser details are public. Do not include personal information or attach a
+          .mathclock backup or private clock-face picture to a GitHub issue.
+        </p>
+        <h2>Security and retention</h2>
+        <p>
+          Local app data remains in your browser until you remove it, clear site data, or uninstall
+          the app. Browser storage is not a substitute for device encryption or access controls;
+          someone who can use your unlocked device or browser profile may be able to view the app's
+          clocks, alarm labels, equations, and pictures.
         </p>
         <h2>Deleting your information</h2>
         <p>
@@ -127,15 +129,9 @@
         </p>
         <h2>Questions</h2>
         <p>
-          Use the
-          <a
-            href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
-            target="_blank"
-            rel="noopener"
-          >
-            feedback form
-          </a>
-          for privacy questions or concerns.
+          Analog Math Clock is operated by Joe Lurie. Send private privacy, security, or support
+          questions to <a href="mailto:contact@analogmathclock.com">contact@analogmathclock.com</a>.
+          Use GitHub only for information you are comfortable posting publicly.
         </p>
       </article>
       <div class="button-row">
@@ -152,7 +148,7 @@
           <a
             href="https://github.com/LurieJoe/analog-math-clock/issues/new/choose"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
           >
             Feedback
           </a>

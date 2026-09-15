@@ -90,6 +90,18 @@ body {
   overscroll-behavior: none;
 }
 
+.storage-warning {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--cp-warning);
+  border-radius: 0.75rem;
+  background: var(--cp-surface);
+  background: color-mix(in srgb, var(--cp-warning) 14%, var(--cp-surface));
+  color: var(--cp-text);
+  font-weight: 650;
+  line-height: 1.45;
+}
+
 .learning-notification,
 .alarm-notification {
   padding: 20px;

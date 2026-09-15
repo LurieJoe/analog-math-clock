@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve Analog Math Clock. Please do not attach a .mathclock backup or a private clock-face picture.
+        Thanks for helping improve Analog Math Clock. GitHub issues are public. Do not include personal information or attach a .mathclock backup or private clock-face picture. Send private privacy or security concerns to contact@analogmathclock.com.
   - type: dropdown
     id: feedback-type
     attributes:
