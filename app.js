@@ -1761,6 +1761,26 @@ function closeMobileActionSheet(restoreFocus = true) {
   if (restoreFocus) elements.mobileHeaderMenu.focus();
 }
 
+// Intl.DateTimeFormat construction is relatively expensive; updateClocks() calls
+// getClockTimeParts() every animation frame (~60/sec) for every non-local-timezone
+// clock, so formatters are built once per time zone and reused rather than rebuilt
+// on every frame.
+const clockTimePartsFormatters = new Map();
+function getClockTimePartsFormatter(timeZone) {
+  let formatter = clockTimePartsFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+    clockTimePartsFormatters.set(timeZone, formatter);
+  }
+  return formatter;
+}
+
 function getClockTimeParts(date, timeZone) {
   if (timeZone === LOCAL_TIME_ZONE) {
     return {
@@ -1770,13 +1790,7 @@ function getClockTimeParts(date, timeZone) {
     };
   }
 
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit"
-  }).formatToParts(date);
+  const parts = getClockTimePartsFormatter(timeZone).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return {
     hour: Number(values.hour),
