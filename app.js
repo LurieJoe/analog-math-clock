@@ -234,6 +234,7 @@ const elements = {
   presentationExit: document.querySelector("#presentation-exit"),
   settingsPanel: document.querySelector("#settings-panel"),
   closeSettings: document.querySelector("#close-settings"),
+  cancelSettings: document.querySelector("#cancel-settings"),
   settingsForm: document.querySelector("#settings-form"),
   timeZone: document.querySelector("#time-zone"),
   timeZoneSearch: document.querySelector("#time-zone-search"),
@@ -2139,6 +2140,23 @@ function closeSettings(revert = true) {
   settingsSnapshot = null;
 }
 
+function saveAndCloseSettings() {
+  const clock = clocks.find((item) => item.id === activeClockId);
+  if (!clock) {
+    closeSettings(false);
+    return true;
+  }
+  const next = readForm();
+  clock.name = next.name;
+  clock.timeZone = next.timeZone;
+  clock.settings = next.settings;
+  // Storage can fail (quota, private mode). Keep the panel open so the
+  // storage warning is visible and the change is not silently lost.
+  if (!saveClocks()) return false;
+  closeSettings(false);
+  return true;
+}
+
 function addClock() {
   if (clocks.length >= MAX_CLOCKS) {
     window.alert(`Analog Math Clock supports up to ${MAX_CLOCKS} clocks.`);
@@ -2985,7 +3003,8 @@ elements.previewChimeSound.addEventListener("click", () => {
   playSound(elements.settingsForm.elements.chimeSound.value);
 });
 
-elements.closeSettings.addEventListener("click", closeSettings);
+elements.closeSettings.addEventListener("click", () => saveAndCloseSettings());
+elements.cancelSettings.addEventListener("click", () => closeSettings(true));
 elements.facePicture.addEventListener("change", async () => {
   const file = elements.facePicture.files?.[0];
   if (!file) return;
@@ -3036,13 +3055,7 @@ elements.timeZoneSearch.addEventListener("change", (event) => {
 });
 elements.settingsForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const clock = clocks.find((item) => item.id === activeClockId);
-  if (!clock) return;
-  const next = readForm();
-  clock.name = next.name;
-  clock.timeZone = next.timeZone;
-  clock.settings = next.settings;
-  if (saveClocks()) closeSettings(false);
+  saveAndCloseSettings();
 });
 elements.resetButton.addEventListener("click", () => {
   const clock = clocks.find((item) => item.id === activeClockId);
@@ -3069,7 +3082,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   closeMobileMenus();
-  if (!elements.settingsPanel.hidden) closeSettings();
+  if (!elements.settingsPanel.hidden) saveAndCloseSettings();
   if (!elements.toolsPanel.hidden) closeTools();
   elements.learningNotification.hidden = true;
   if (!elements.alarmNotification.hidden) dismissActiveAlarm();
