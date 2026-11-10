@@ -791,7 +791,7 @@ noscript {
   color: var(--cp-accent-fg);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 640px) {
   .app-shell {
     padding:
       max(8px, env(safe-area-inset-top))
@@ -1381,8 +1381,30 @@ body.mobile-sheet-open {
 }
 
 .clock {
-  width: min(100%, 560px);
+  /* Single source of truth for clock size. Whichever is smaller: the room
+     across, or the room down once everything else has had its share.
+     --clock-chrome is that vertical share and shrinks as the window does;
+     --clock-extra is what a decorative case (hood, pedestal) adds on top. */
+  width: min(
+    100%,
+    560px,
+    max(130px, calc(100dvh - var(--clock-chrome, 252px) - var(--clock-extra, 0px)))
+  );
   max-height: none;
+}
+
+/* Decorative bodies frame the face with fixed-height trim, so they need
+   that much more of the window than a plain face does. */
+.clock-display.alarm {
+  --clock-extra: 110px;
+}
+
+.clock-display.grandfather {
+  --clock-extra: 230px;
+}
+
+.clock-display.cuckoo {
+  --clock-extra: 210px;
 }
 
 .clock-footer {
@@ -1437,7 +1459,7 @@ input[type="file"] {
   margin: -6px 0 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 640px) {
   .app-header {
     align-items: center;
     margin-bottom: 16px;
@@ -1493,10 +1515,6 @@ input[type="file"] {
     align-items: flex-start;
   }
 
-  .clock {
-    width: 100%;
-  }
-
   .settings-actions {
     grid-template-columns: 1fr;
   }
@@ -1536,5 +1554,104 @@ input[type="file"] {
 
   .clock-footer {
     flex-direction: row;
+  }
+}
+
+/* ===== Widget layout: short windows =====
+   The page title and its button row give way to a single menu button that
+   floats over the corner, so a small window reads as a clock widget rather
+   than a cramped web page. */
+@media (max-height: 640px) {
+  :root {
+    --clock-chrome: 150px;
+  }
+
+  /* display:contents lifts the menu button out of the header's layout box
+     without touching the markup; the header's two divs (title, button row)
+     are what we actually want gone. */
+  .app-header {
+    display: contents;
+  }
+
+  .app-header > div {
+    display: none;
+  }
+
+  .app-footer {
+    display: none;
+  }
+
+  .mobile-header-menu {
+    position: fixed;
+    z-index: 25;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: max(8px, env(safe-area-inset-left));
+    display: inline-flex;
+    opacity: 0;
+    transition: opacity 140ms ease-out;
+  }
+
+  /* Reveal on hover, on keyboard focus, and while the menu is open. */
+  .app-shell:hover .mobile-header-menu,
+  .mobile-header-menu:focus-visible,
+  .mobile-header-menu[aria-expanded="true"] {
+    opacity: 1;
+  }
+
+  .clock-card {
+    padding: 10px;
+  }
+
+  .clock-card-header {
+    min-height: 0;
+    margin-bottom: 6px;
+  }
+
+  /* The inline row of per-clock buttons is a roomy-window affordance; even
+     while invisible it reserves width and squeezes the clock's name to an
+     ellipsis. Use the compact menu instead. */
+  .card-actions {
+    display: none;
+  }
+
+  .mobile-actions {
+    display: block;
+  }
+
+  /* One line, truncated — a wrapped clock name steals the clock's room. */
+  .clock-name {
+    font-size: 1rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .clock-footer {
+    margin-top: 6px;
+  }
+}
+
+/* No hover to reveal it with (touch, pen), so leave the button visible. */
+@media (max-height: 640px) and (hover: none) {
+  .mobile-header-menu {
+    opacity: 1;
+  }
+}
+
+/* Someone who prefers less motion still gets the button, just without a fade. */
+@media (max-height: 640px) and (prefers-reduced-motion: reduce) {
+  .mobile-header-menu {
+    transition: none;
+  }
+}
+
+/* Very short: the clock is the whole point, so drop the rest. */
+@media (max-height: 420px) {
+  :root {
+    --clock-chrome: 122px;
+  }
+
+  .clock-footer {
+    display: none;
   }
 }
